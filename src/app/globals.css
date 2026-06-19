@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: Arial, 'Helvetica Neue', Helvetica, system-ui, sans-serif;
+    background-color: #0c0c0f;
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-[#0c0c0f] text-zinc-100 antialiased;
+    min-height: 100dvh;
+  }
+
+  /* Pink focus ring for all interactive elements */
+  :focus-visible {
+    outline: 2px solid #D4537E;
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar       { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: #D4537E; }
+}
+
+@layer components {
+  .input-base {
+    @apply w-full rounded-xl bg-zinc-800/60 border border-zinc-700
+           px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500
+           transition-colors duration-150
+           focus:outline-none focus:border-pink focus:ring-1 focus:ring-pink;
+  }
+
+  .btn-primary {
+    @apply w-full rounded-xl bg-pink hover:bg-pink-hover active:scale-[0.98]
+           px-4 py-3 text-sm font-semibold text-white
+           transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply rounded-xl px-4 py-2 text-sm text-zinc-400 hover:text-zinc-100
+           hover:bg-zinc-800 transition-colors duration-150;
+  }
+}
