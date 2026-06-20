@@ -31,6 +31,11 @@
       "static/chunks/main-app.js",
       "static/chunks/app/(app)/notifications/page.js"
     ],
+    "/(app)/hashtag/[tag]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/hashtag/[tag]/page.js"
+    ],
     "/_not-found/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",

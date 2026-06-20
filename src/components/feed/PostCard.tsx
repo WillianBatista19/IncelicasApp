@@ -206,11 +206,7 @@ export default function PostCard({ post, currentUserId }: Props) {
         )}
       </div>
 
-      {post.content && (
-        <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-zinc-200">
-          {post.content}
-        </p>
-      )}
+      {post.content && <PostText text={post.content} />}
 
       <MediaEmbed spotifyUrl={post.spotify_url} youtubeUrl={post.youtube_url} />
 
@@ -310,13 +306,48 @@ function OriginalPostCard({ original }: { original: OriginalPost }) {
           </span>
         )}
       </div>
-      <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-zinc-300">
-        {original.content}
-      </p>
+      {original.content && <PostText text={original.content} className="text-zinc-300" />}
       {(original.spotify_url || original.youtube_url) && (
         <MediaEmbed spotifyUrl={original.spotify_url} youtubeUrl={original.youtube_url} />
       )}
     </div>
+  )
+}
+
+// ─── Inline text renderer (clickable #hashtags and @handles) ─────────────────
+
+function PostText({ text, className }: { text: string; className?: string }) {
+  const parts = text.split(/([@#][A-Za-z0-9_]+)/g)
+  return (
+    <p className={`mt-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-zinc-200 ${className ?? ''}`}>
+      {parts.map((part, i) => {
+        if (/^#[A-Za-z0-9_]+$/.test(part)) {
+          return (
+            <Link
+              key={i}
+              href={`/hashtag/${part.slice(1).toLowerCase()}`}
+              className="font-medium text-[#D4537E] hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {part}
+            </Link>
+          )
+        }
+        if (/^@[A-Za-z0-9_]+$/.test(part)) {
+          return (
+            <Link
+              key={i}
+              href={`/profile/${part.slice(1)}`}
+              className="font-medium text-[#7F77DD] hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {part}
+            </Link>
+          )
+        }
+        return part
+      })}
+    </p>
   )
 }
 

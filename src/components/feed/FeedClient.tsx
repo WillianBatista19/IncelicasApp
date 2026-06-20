@@ -2,15 +2,11 @@
 
 import { useFeed } from '@/hooks/useFeed'
 import PostCard from '@/components/feed/PostCard'
-import type { Category } from '@/types'
 
-type Props = {
-  currentUserId: string
-  category:      Category | null
-}
+type Props = { currentUserId: string }
 
-export default function FeedClient({ currentUserId, category }: Props) {
-  const { posts, loading } = useFeed(category)
+export default function FeedClient({ currentUserId }: Props) {
+  const { posts, loading } = useFeed()
 
   if (loading) {
     return (
@@ -35,9 +31,7 @@ export default function FeedClient({ currentUserId, category }: Props) {
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-6 py-12 text-center">
         <p className="mb-2 text-2xl">✨</p>
         <p className="text-sm text-zinc-400">
-          {category
-            ? `Nenhum post com #${category} por aqui ainda.`
-            : 'Nenhuma vibe por aqui ainda. Seja a primeira a postar, incelica!'}
+          Nenhuma vibe por aqui ainda. Seja a primeira a postar, incelica!
         </p>
       </div>
     )

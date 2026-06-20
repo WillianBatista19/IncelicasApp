@@ -1,16 +1,6 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import type { Category } from '@/types'
-
-const CATEGORIES: { value: Category; label: string }[] = [
-  { value: 'anime',  label: 'Anime'  },
-  { value: 'bbb',    label: 'BBB'    },
-  { value: 'musica', label: 'Música' },
-  { value: 'serie',  label: 'Série'  },
-  { value: 'filme',  label: 'Filme'  },
-  { value: 'livro',  label: 'Livro'  },
-]
 
 type Props = {
   action: (fd: FormData) => Promise<void>
@@ -18,9 +8,13 @@ type Props = {
 
 export default function ComposerForm({ action }: Props) {
   const [content,  setContent]  = useState('')
-  const [category, setCategory] = useState<Category | null>(null)
   const [mediaUrl, setMediaUrl] = useState('')
   const [pending, startTransition] = useTransition()
+
+  // Detect hashtags while typing for live preview
+  const detectedTags = Array.from(
+    new Set((content.match(/#[A-Za-z0-9_]+/g) ?? []).map(t => t.toLowerCase()))
+  )
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -28,13 +22,11 @@ export default function ComposerForm({ action }: Props) {
 
     const fd = new FormData()
     fd.append('content', content.trim())
-    if (category) fd.append('category', category)
     if (mediaUrl.trim()) fd.append('media_url', mediaUrl.trim())
 
     startTransition(async () => {
       await action(fd)
       setContent('')
-      setCategory(null)
       setMediaUrl('')
     })
   }
@@ -50,9 +42,23 @@ export default function ComposerForm({ action }: Props) {
         maxLength={500}
         rows={3}
         disabled={pending}
-        placeholder="O que tá rolando, incelica?"
+        placeholder="O que tá rolando, incelica? Use #hashtags para categorizar."
         className="w-full resize-none bg-transparent text-sm text-zinc-100 placeholder-zinc-500 outline-none disabled:opacity-50"
       />
+
+      {/* Live hashtag preview */}
+      {detectedTags.length > 0 && (
+        <div className="mt-1 flex flex-wrap gap-1.5">
+          {detectedTags.map(tag => (
+            <span
+              key={tag}
+              className="inline-flex items-center rounded-full border border-[#D4537E]/40 bg-[#D4537E]/10 px-2 py-0.5 text-[11px] font-semibold text-[#D4537E]"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
 
       <input
         type="text"
@@ -60,36 +66,17 @@ export default function ComposerForm({ action }: Props) {
         onChange={(e) => setMediaUrl(e.target.value)}
         placeholder="🎵 Link do Spotify ou YouTube (opcional)"
         disabled={pending}
-        className="mt-2 w-full rounded-xl bg-zinc-800 px-3 py-2 text-xs text-zinc-300 placeholder-zinc-600 outline-none focus:ring-1 focus:ring-[#D4537E] disabled:opacity-50"
+        className="mt-3 w-full rounded-xl bg-zinc-800 px-3 py-2 text-xs text-zinc-300 placeholder-zinc-600 outline-none focus:ring-1 focus:ring-[#D4537E] disabled:opacity-50"
       />
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        {CATEGORIES.map(({ value, label }) => {
-          const active = category === value
-          return (
-            <button
-              key={value}
-              type="button"
-              disabled={pending}
-              onClick={() => setCategory(active ? null : value)}
-              className={[
-                'rounded-full border px-3 py-1 text-xs font-medium transition-all active:scale-95 disabled:opacity-50',
-                active
-                  ? 'border-[#D4537E] bg-[#D4537E]/20 text-[#D4537E]'
-                  : 'border-zinc-700 bg-zinc-800 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200',
-              ].join(' ')}
-            >
-              #{label}
-            </button>
-          )
-        })}
-      </div>
-
-      <div className="mt-3 flex justify-end border-t border-zinc-800 pt-3">
+      <div className="mt-3 flex items-center justify-between border-t border-zinc-800 pt-3">
+        <span className="text-xs text-zinc-700">
+          {content.length}/500
+        </span>
         <button
           type="submit"
           disabled={!content.trim() || pending}
-          className="rounded-xl bg-[#D4537E] px-5 py-2 text-sm font-semibold text-white hover:bg-[#c0446e] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="rounded-xl bg-[#D4537E] px-5 py-2 text-sm font-semibold text-white transition-all hover:bg-[#c0446e] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {pending ? 'Postando…' : 'Postar'}
         </button>

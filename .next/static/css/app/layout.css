@@ -1132,6 +1132,15 @@ video {
   --tw-border-opacity: 1;
   border-color: rgb(39 39 42 / var(--tw-border-opacity, 1));
 }
+.border-\[\#D4537E\]\/60 {
+  border-color: rgb(212 83 126 / 0.6);
+}
+.border-\[\#D4537E\]\/40 {
+  border-color: rgb(212 83 126 / 0.4);
+}
+.border-\[\#D4537E\]\/30 {
+  border-color: rgb(212 83 126 / 0.3);
+}
 .bg-\[\#D4537E\] {
   --tw-bg-opacity: 1;
   background-color: rgb(212 83 126 / var(--tw-bg-opacity, 1));
@@ -1224,6 +1233,9 @@ video {
 }
 .bg-zinc-950\/60 {
   background-color: rgb(9 9 11 / 0.6);
+}
+.bg-\[\#D4537E\]\/10 {
+  background-color: rgb(212 83 126 / 0.1);
 }
 .bg-auth-radial {
   background-image: radial-gradient(ellipse 80% 60% at 50% 0%, #2a0d1a 0%, #0c0c0f 60%);
@@ -1411,6 +1423,9 @@ video {
 .text-xs {
   font-size: 0.75rem;
   line-height: 1rem;
+}
+.text-\[11px\] {
+  font-size: 11px;
 }
 .font-bold {
   font-weight: 700;
@@ -1695,6 +1710,10 @@ video {
 
 .hover\:bg-zinc-800\/60:hover {
   background-color: rgb(39 39 42 / 0.6);
+}
+
+.hover\:bg-\[\#D4537E\]\/20:hover {
+  background-color: rgb(212 83 126 / 0.2);
 }
 
 .hover\:text-pink:hover {

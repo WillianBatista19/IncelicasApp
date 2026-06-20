@@ -15,23 +15,18 @@ async function createPost(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
-  const category = (formData.get('category')  as string | null) || null
   const mediaUrl = (formData.get('media_url') as string | null)?.trim() || null
 
   let spotify_url: string | null = null
   let youtube_url: string | null = null
   if (mediaUrl) {
-    if (mediaUrl.includes('spotify.com')) {
-      spotify_url = mediaUrl
-    } else if (mediaUrl.includes('youtube.com') || mediaUrl.includes('youtu.be')) {
-      youtube_url = mediaUrl
-    }
+    if (mediaUrl.includes('spotify.com'))                                   spotify_url = mediaUrl
+    else if (mediaUrl.includes('youtube.com') || mediaUrl.includes('youtu.be')) youtube_url = mediaUrl
   }
 
   await supabase.from('posts').insert({
     user_id: user.id,
     content,
-    category,
     spotify_url,
     youtube_url,
   })

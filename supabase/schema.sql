@@ -390,6 +390,71 @@ create trigger trg_notify_comment_like
   for each row execute procedure notify_on_comment_like();
 
 -- ============================================================
+-- Hashtags  (free-form tags extracted from post content)
+-- ============================================================
+
+create table hashtags (
+  id         uuid primary key default gen_random_uuid(),
+  post_id    uuid not null references posts (id) on delete cascade,
+  tag        text not null check (length(tag) between 1 and 100),
+  created_at timestamptz not null default now(),
+
+  constraint hashtags_unique unique (post_id, tag)
+);
+
+create index hashtags_tag_idx     on hashtags (tag, created_at desc);
+create index hashtags_post_id_idx on hashtags (post_id);
+
+alter table hashtags enable row level security;
+
+create policy "hashtags: public read"
+  on hashtags for select using (true);
+
+-- Extract #hashtags from post content on insert or content update
+create or replace function extract_post_hashtags()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_tag text;
+begin
+  -- Remove stale hashtags (handles UPDATE as well as INSERT)
+  delete from hashtags where post_id = new.id;
+
+  for v_tag in
+    select distinct lower(m[1])
+    from regexp_matches(new.content, '#([A-Za-z0-9_]+)', 'g') m
+    where length(m[1]) between 1 and 100
+  loop
+    insert into hashtags (post_id, tag)
+    values (new.id, v_tag)
+    on conflict (post_id, tag) do nothing;
+  end loop;
+
+  return new;
+end;
+$$;
+
+create trigger trg_extract_hashtags
+  after insert or update of content on posts
+  for each row
+  execute procedure extract_post_hashtags();
+
+-- RPC: top N hashtags by post count in the last X hours
+create or replace function trending_hashtags(hours int default 24, max_results int default 10)
+returns table (tag text, post_count bigint)
+language sql stable
+as $$
+  select h.tag, count(*) as post_count
+  from hashtags h
+  where h.created_at >= now() - (hours || ' hours')::interval
+  group by h.tag
+  order by post_count desc, h.tag asc
+  limit max_results;
+$$;
+
+-- ============================================================
 -- Row Level Security
 -- ============================================================
 
