@@ -2,6 +2,17 @@ import Link from 'next/link'
 
 const ENTRIES = [
   {
+    version: 'v0.10',
+    date:    'Jun 2026',
+    title:   'Correção de visualização de stories',
+    items: [
+      'Views de stories agora persistem corretamente no banco de dados',
+      'Corrigido: upsert sem permissão de UPDATE bloqueava o salvamento silenciosamente — substituído por INSERT com tratamento de duplicata (código 23505)',
+      'Ao abrir stories de um usuário, o viewer abre diretamente no primeiro story não visto',
+      'Erros ao salvar view agora são logados no console para facilitar diagnóstico',
+    ],
+  },
+  {
     version: 'v0.9',
     date:    'Jun 2026',
     title:   'Integração com Steam e correções de layout',

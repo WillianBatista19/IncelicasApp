@@ -113,13 +113,19 @@ export default function StoryViewer({
 
   useEffect(() => {
     if (!story) return
-    onMarkViewed(story.id)
-    void supabase
-      .from('story_views')
-      .upsert(
-        { story_id: story.id, user_id: currentUserId },
-        { onConflict: 'story_id,user_id', ignoreDuplicates: true },
-      )
+    const storyId = story.id
+    onMarkViewed(storyId)
+
+    async function saveView() {
+      const { error } = await supabase
+        .from('story_views')
+        .insert({ story_id: storyId, user_id: currentUserId })
+      // 23505 = unique_violation (already viewed) — expected, ignore silently
+      if (error && error.code !== '23505') {
+        console.error('[StoryViewer] failed to save view:', error)
+      }
+    }
+    void saveView()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupIdx, storyIdx])
 
