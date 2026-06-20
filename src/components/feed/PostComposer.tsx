@@ -7,7 +7,6 @@ import type { Category, Profile } from '@/types'
 
 const MAX = 500
 
-// 10 MB for images/GIFs, 50 MB for videos
 const IMAGE_LIMIT = 10 * 1024 * 1024
 const VIDEO_LIMIT = 50 * 1024 * 1024
 
@@ -31,23 +30,29 @@ export default function PostComposer({ profile }: { profile: Profile }) {
   const [mediaType,      setMediaType]      = useState<'image' | 'video' | null>(null)
   const [mediaError,     setMediaError]     = useState<string | null>(null)
   const [showCameraMenu, setShowCameraMenu] = useState(false)
+  const [albumArtUrl,    setAlbumArtUrl]    = useState<string | null>(null)
+  const [lastfmLoading,  setLastfmLoading]  = useState(false)
+  const [toast,          setToast]          = useState<string | null>(null)
 
   const textareaRef   = useRef<HTMLTextAreaElement>(null)
   const galleryRef    = useRef<HTMLInputElement>(null)
   const cameraBackRef = useRef<HTMLInputElement>(null)
   const selfieRef     = useRef<HTMLInputElement>(null)
   const previewUrlRef = useRef<string | null>(null)
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const supabase      = useMemo(() => createClient(), [])
 
-  // Revoke object URL on unmount to avoid memory leaks
   useEffect(() => {
-    return () => { if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current) }
+    return () => {
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    }
   }, [])
 
   const trimmed   = content.trim()
   const remaining = MAX - content.length
   const overLimit = remaining < 0
-  const canPost   = (trimmed.length > 0 || mediaFile !== null) && !overLimit && !submitting
+  const canPost   = (trimmed.length > 0 || mediaFile !== null || albumArtUrl !== null) && !overLimit && !submitting
 
   function resize() {
     const el = textareaRef.current
@@ -60,6 +65,12 @@ export default function PostComposer({ profile }: { profile: Profile }) {
     if (url.includes('spotify.com'))                              return 'spotify'
     if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube'
     return null
+  }
+
+  function showToast(msg: string) {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    setToast(msg)
+    toastTimerRef.current = setTimeout(() => setToast(null), 3000)
   }
 
   function handleMedia(file: File | null) {
@@ -75,8 +86,8 @@ export default function PostComposer({ profile }: { profile: Profile }) {
     }
 
     setMediaError(null)
+    setAlbumArtUrl(null)
 
-    // Revoke previous preview URL before creating a new one
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
     const url = URL.createObjectURL(file)
     previewUrlRef.current = url
@@ -92,9 +103,58 @@ export default function PostComposer({ profile }: { profile: Profile }) {
     setMediaPreview(null)
     setMediaType(null)
     setMediaError(null)
+    setAlbumArtUrl(null)
     if (galleryRef.current)    galleryRef.current.value    = ''
     if (cameraBackRef.current) cameraBackRef.current.value = ''
     if (selfieRef.current)     selfieRef.current.value     = ''
+  }
+
+  async function fetchNowPlaying() {
+    if (!profile.lastfm_username || lastfmLoading) return
+    setLastfmLoading(true)
+
+    try {
+      const qs   = new URLSearchParams({ method: 'user.getrecenttracks', user: profile.lastfm_username, limit: '1' })
+      const res  = await fetch(`/api/lastfm?${qs}`)
+      const json = await res.json()
+
+      const raw   = json?.recenttracks?.track
+      const track = Array.isArray(raw) ? raw[0] : (raw ?? null)
+
+      if (!track || track['@attr']?.nowplaying !== 'true') {
+        showToast('Nenhuma música tocando no momento')
+        return
+      }
+
+      const trackName  = String(track.name  ?? '')
+      const artistName = String(track.artist?.['#text'] ?? '')
+      const trackUrl   = String(track.url   ?? '')
+
+      const images = (track.image ?? []) as Array<{ '#text': string; size: string }>
+      const artUrl =
+        images.find(i => i.size === 'extralarge')?.['#text'] ||
+        images.find(i => i.size === 'large')?.['#text'] ||
+        ''
+
+      setContent(`Ouvindo agora: ${trackName} — ${artistName}`)
+      requestAnimationFrame(() => resize())
+
+      if (trackUrl) setMediaUrl(trackUrl)
+
+      if (artUrl) {
+        // Clear any existing file upload; use the CDN URL directly
+        if (previewUrlRef.current) { URL.revokeObjectURL(previewUrlRef.current); previewUrlRef.current = null }
+        setMediaFile(null)
+        setMediaError(null)
+        setAlbumArtUrl(artUrl)
+        setMediaPreview(artUrl)
+        setMediaType('image')
+      }
+    } catch {
+      showToast('Erro ao buscar música. Tenta de novo!')
+    } finally {
+      setLastfmLoading(false)
+    }
   }
 
   async function submit(e: React.FormEvent) {
@@ -125,6 +185,9 @@ export default function PostComposer({ profile }: { profile: Profile }) {
       const { data: { publicUrl } } = supabase.storage.from('post-images').getPublicUrl(path)
       mediaStorageUrl = publicUrl
       console.log('[PostComposer] uploaded, publicUrl:', mediaStorageUrl)
+    } else if (albumArtUrl) {
+      // Store Last.fm CDN URL directly — no upload needed
+      mediaStorageUrl = albumArtUrl
     }
 
     const embedUrl = mediaUrl.trim()
@@ -154,7 +217,6 @@ export default function PostComposer({ profile }: { profile: Profile }) {
     setSubmitting(false)
   }
 
-  /* ─── ring colours ─── */
   const ringColour    = overLimit ? '#ef4444' : remaining <= 50 ? '#f97316' : '#D4537E'
   const circumference = 2 * Math.PI * 9
   const filled        = Math.min(circumference, (content.length / MAX) * circumference)
@@ -209,8 +271,6 @@ export default function PostComposer({ profile }: { profile: Profile }) {
           />
         </div>
 
-        {/* Everything below spans the full card width (no avatar indent) */}
-
         {/* ── Media buttons ── */}
         <div className="mt-2 flex items-center gap-1">
           <button
@@ -254,7 +314,28 @@ export default function PostComposer({ profile }: { profile: Profile }) {
               </>
             )}
           </div>
+
+          {/* Last.fm now playing — only visible when the user has lastfm_username */}
+          {profile.lastfm_username && (
+            <button
+              type="button"
+              onClick={fetchNowPlaying}
+              disabled={lastfmLoading}
+              title="Ouvindo agora no Last.fm"
+              className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-[#D4537E] active:scale-95 disabled:opacity-50"
+            >
+              {lastfmLoading
+                ? <SpinnerIcon className="h-5 w-5 animate-spin" />
+                : <MusicNoteIcon className="h-5 w-5" />
+              }
+            </button>
+          )}
         </div>
+
+        {/* ── Toast (now playing feedback) ── */}
+        {toast && (
+          <p className="mt-1.5 text-xs text-zinc-400">{toast}</p>
+        )}
 
         {/* ── File size error ── */}
         {mediaError && (
@@ -272,6 +353,19 @@ export default function PostComposer({ profile }: { profile: Profile }) {
                 playsInline
                 className="max-h-48 rounded-xl"
               />
+            ) : albumArtUrl ? (
+              /* Album art: fixed square, contain so the full cover is visible */
+              <div
+                className="flex h-48 w-48 items-center justify-center overflow-hidden rounded-xl"
+                style={{ background: '#0c0c0f' }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={mediaPreview!}
+                  alt="Capa do álbum"
+                  className="h-full w-full object-contain"
+                />
+              </div>
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -388,6 +482,24 @@ function CameraIcon({ className }: { className?: string }) {
       <path stroke="none" d="M0 0h24v24H0z" fill="none" />
       <path d="M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2" />
       <path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
+    </svg>
+  )
+}
+
+function MusicNoteIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M9 18V5l12-2v13" />
+      <circle cx="6" cy="18" r="3" />
+      <circle cx="18" cy="16" r="3" />
+    </svg>
+  )
+}
+
+function SpinnerIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
+      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
     </svg>
   )
 }

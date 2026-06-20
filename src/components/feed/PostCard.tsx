@@ -328,7 +328,7 @@ function PostMedia({
   return (
     <div
       className="relative mt-3 w-full cursor-zoom-in overflow-hidden rounded-xl"
-      style={{ height: Math.min(maxHeight, 300) }}
+      style={{ height: Math.min(maxHeight, 300), background: '#0c0c0f' }}
       onClick={() => onImageClick(url)}
     >
       <Image
@@ -336,7 +336,7 @@ function PostMedia({
         alt="Imagem do post"
         fill
         sizes="(max-width: 640px) 100vw, 600px"
-        className="object-cover"
+        className="object-contain"
         loading="lazy"
       />
     </div>
