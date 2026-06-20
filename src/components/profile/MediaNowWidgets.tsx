@@ -56,7 +56,7 @@ export default function MediaNowWidgets({ watching, reading, animeTitle, animeCo
   if (!watching && !reading && !animeTitle) return null
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
       {watching && (
         <div className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
           <CoverImage src={watching.poster_url} alt={watching.title} emoji="🎬" />
