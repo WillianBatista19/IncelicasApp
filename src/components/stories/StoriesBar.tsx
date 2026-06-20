@@ -4,12 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Avatar from '@/components/Avatar'
 import StoryViewer from '@/components/stories/StoryViewer'
-import type { Story, StoryProfile } from '@/types'
-
-type StoryGroup = {
-  user:    StoryProfile
-  stories: Story[]
-}
+import type { Story, StoryGroup, StoryProfile } from '@/types'
 
 type Props = { currentUserId: string }
 
@@ -17,13 +12,13 @@ export default function StoriesBar({ currentUserId }: Props) {
   const supabase = useMemo(() => createClient(), [])
   const fileRef  = useRef<HTMLInputElement>(null)
 
-  const [myProfile,    setMyProfile]    = useState<StoryProfile | null>(null)
-  const [myStories,    setMyStories]    = useState<Story[]>([])
-  const [others,       setOthers]       = useState<StoryGroup[]>([])
-  const [viewedIds,    setViewedIds]    = useState<Set<string>>(new Set())
-  const [activeUserId, setActiveUserId] = useState<string | null>(null)
-  const [uploading,    setUploading]    = useState(false)
-  const [loading,      setLoading]      = useState(true)
+  const [myProfile,         setMyProfile]         = useState<StoryProfile | null>(null)
+  const [myStories,         setMyStories]         = useState<Story[]>([])
+  const [others,            setOthers]            = useState<StoryGroup[]>([])
+  const [viewedIds,         setViewedIds]         = useState<Set<string>>(new Set())
+  const [activeGroupIndex,  setActiveGroupIndex]  = useState<number | null>(null)
+  const [uploading,         setUploading]         = useState(false)
+  const [loading,           setLoading]           = useState(true)
 
   const loadStories = useCallback(async () => {
     const now = new Date().toISOString()
@@ -31,7 +26,7 @@ export default function StoriesBar({ currentUserId }: Props) {
     const [storiesRes, viewsRes, profileRes] = await Promise.all([
       supabase
         .from('stories')
-        .select('id, user_id, media_url, created_at, expires_at, profiles(id, username, display_name, avatar_url)')
+        .select('id, user_id, media_url, created_at, expires_at, profiles!stories_user_id_fkey(id, username, display_name, avatar_url)')
         .gt('expires_at', now)
         .order('created_at', { ascending: true }),
       supabase
@@ -44,6 +39,15 @@ export default function StoriesBar({ currentUserId }: Props) {
         .eq('id', currentUserId)
         .single(),
     ])
+
+    console.log('[StoriesBar] loadStories results', {
+      storiesError: storiesRes.error,
+      storiesCount: storiesRes.data?.length ?? 0,
+      stories: storiesRes.data,
+      viewsError: viewsRes.error,
+      profileError: profileRes.error,
+      profile: profileRes.data,
+    })
 
     const allStories = (storiesRes.data as unknown as Story[] | null) ?? []
     const viewed     = new Set((viewsRes.data ?? []).map(v => (v as { story_id: string }).story_id))
@@ -59,8 +63,11 @@ export default function StoriesBar({ currentUserId }: Props) {
       if (s.user_id === currentUserId) {
         mine.push(s)
       } else {
+        // profiles from PostgREST may come back as an array for some FK directions
+        const rawProfiles = s.profiles as unknown as StoryProfile | StoryProfile[]
+        const user = Array.isArray(rawProfiles) ? rawProfiles[0] : rawProfiles
         if (!groupMap[s.user_id]) {
-          groupMap[s.user_id] = { user: s.profiles, stories: [] }
+          groupMap[s.user_id] = { user, stories: [] }
         }
         groupMap[s.user_id].stories.push(s)
       }
@@ -83,6 +90,20 @@ export default function StoriesBar({ currentUserId }: Props) {
 
   useEffect(() => { loadStories() }, [loadStories])
 
+  // viewerGroups: current user's group first (if they have stories), then others.
+  // Fall back to the profile embedded in the story itself if the separate fetch failed.
+  const viewerGroups = useMemo<StoryGroup[]>(() => {
+    if (myStories.length > 0) {
+      const rawEmbedded = myStories[0].profiles as unknown as StoryProfile | StoryProfile[]
+      const embedded    = Array.isArray(rawEmbedded) ? rawEmbedded[0] : rawEmbedded
+      const groupUser   = myProfile ?? embedded ?? null
+      if (groupUser) {
+        return [{ user: groupUser, stories: myStories }, ...others]
+      }
+    }
+    return others
+  }, [myProfile, myStories, others])
+
   const handleMarkViewed = useCallback((storyId: string) => {
     setViewedIds(prev => {
       const next = new Set(prev)
@@ -91,7 +112,22 @@ export default function StoriesBar({ currentUserId }: Props) {
     })
   }, [])
 
-  const closeViewer = useCallback(() => setActiveUserId(null), [])
+  const handleStoryDeleted = useCallback((storyId: string) => {
+    setMyStories(prev => prev.filter(s => s.id !== storyId))
+    // Background refresh to keep the bar accurate
+    loadStories()
+  }, [loadStories])
+
+  const closeViewer = useCallback(() => setActiveGroupIndex(null), [])
+
+  useEffect(() => {
+    console.log('[StoriesBar] viewerGroups updated', {
+      count: viewerGroups.length,
+      groups: viewerGroups,
+      myStories: myStories.length,
+      myProfile,
+    })
+  }, [viewerGroups, myStories, myProfile])
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -106,28 +142,30 @@ export default function StoriesBar({ currentUserId }: Props) {
       .from('stories')
       .upload(path, file, { contentType: file.type })
 
-    if (!uploadErr) {
+    if (uploadErr) {
+      console.error('[StoriesBar] storage upload error', uploadErr)
+    } else {
       const { data: { publicUrl } } = supabase.storage.from('stories').getPublicUrl(path)
-      await supabase.from('stories').insert({ user_id: currentUserId, media_url: publicUrl })
-      await loadStories()
+      console.log('[StoriesBar] uploading to stories table, publicUrl:', publicUrl)
+      const { error: insertErr } = await supabase
+        .from('stories')
+        .insert({ user_id: currentUserId, media_url: publicUrl })
+      if (insertErr) {
+        console.error('[StoriesBar] stories insert error', insertErr)
+      } else {
+        console.log('[StoriesBar] story inserted successfully, reloading...')
+        await loadStories()
+      }
     }
 
     setUploading(false)
   }
 
-  // Build the flat list used by the viewer (current user first, then others)
-  const viewerGroups = useMemo<StoryGroup[]>(() => {
-    const myGroup: StoryGroup | null =
-      myProfile && myStories.length > 0
-        ? { user: myProfile, stories: myStories }
-        : null
-    return myGroup ? [myGroup, ...others] : others
-  }, [myProfile, myStories, others])
-
-  const activeGroup = viewerGroups.find(g => g.user.id === activeUserId) ?? null
-
   const myHasStories = myStories.length > 0
   const myHasUnseen  = myStories.some(s => !viewedIds.has(s.id))
+
+  // Index of the current user's group in viewerGroups (0 if present, else -1)
+  const myGroupIndex = myHasStories ? 0 : -1
 
   if (loading) {
     return (
@@ -154,10 +192,10 @@ export default function StoriesBar({ currentUserId }: Props) {
           <div className="relative">
             <button
               type="button"
-              aria-label={myHasStories ? 'Ver sua história' : 'Adicionar história'}
+              aria-label="Ver sua história"
               onClick={() => {
-                if (myHasStories) setActiveUserId(currentUserId)
-                else fileRef.current?.click()
+                console.log('[StoriesBar] my avatar click', { myHasStories, myGroupIndex, viewerGroups })
+                if (myHasStories) setActiveGroupIndex(myGroupIndex)
               }}
             >
               {myHasStories ? (
@@ -171,7 +209,7 @@ export default function StoriesBar({ currentUserId }: Props) {
               )}
             </button>
 
-            {/* Add-story badge */}
+            {/* Add-story badge — always visible */}
             <button
               type="button"
               aria-label="Adicionar story"
@@ -189,7 +227,9 @@ export default function StoriesBar({ currentUserId }: Props) {
         </div>
 
         {/* ── Other users ───────────────────────────────────────── */}
-        {others.map(group => {
+        {others.map((group, i) => {
+          // In viewerGroups, others start at index 1 if myGroup exists, else at 0
+          const viewerIndex = myHasStories ? i + 1 : i
           const unseen = group.stories.some(s => !viewedIds.has(s.id))
           const name   = group.user.display_name || group.user.username
           return (
@@ -197,7 +237,10 @@ export default function StoriesBar({ currentUserId }: Props) {
               <button
                 type="button"
                 aria-label={`Ver história de ${name}`}
-                onClick={() => setActiveUserId(group.user.id)}
+                onClick={() => {
+                  console.log('[StoriesBar] other avatar click', { name, viewerIndex, viewerGroups })
+                  setActiveGroupIndex(viewerIndex)
+                }}
               >
                 <RingWrapper seen={!unseen}>
                   <Avatar src={group.user.avatar_url} name={name} size="lg" />
@@ -217,12 +260,15 @@ export default function StoriesBar({ currentUserId }: Props) {
         onChange={handleFileSelect}
       />
 
-      {activeGroup && (
+      {activeGroupIndex !== null && console.log('[StoriesBar] opening viewer', { activeGroupIndex, viewerGroupsLen: viewerGroups.length, viewerGroups }) as unknown as null}
+      {activeGroupIndex !== null && (
         <StoryViewer
-          stories={activeGroup.stories}
-          viewedIds={viewedIds}
+          groups={viewerGroups}
+          initialGroupIndex={activeGroupIndex}
           currentUserId={currentUserId}
+          viewedIds={viewedIds}
           onMarkViewed={handleMarkViewed}
+          onStoryDeleted={handleStoryDeleted}
           onClose={closeViewer}
         />
       )}
@@ -230,7 +276,7 @@ export default function StoriesBar({ currentUserId }: Props) {
   )
 }
 
-// ── Ring wrapper (gradient = unseen, gray = seen) ──────────────────────────
+// ── Ring wrapper ───────────────────────────────────────────────────────────
 
 function RingWrapper({ seen, children }: { seen: boolean; children: React.ReactNode }) {
   return (
@@ -241,7 +287,7 @@ function RingWrapper({ seen, children }: { seen: boolean; children: React.ReactN
           : 'bg-gradient-to-tr from-[#D4537E] to-[#7F77DD]'
       }`}
     >
-      <div className="rounded-full p-[2px] bg-zinc-950">
+      <div className="rounded-full bg-zinc-950 p-[2px]">
         {children}
       </div>
     </div>

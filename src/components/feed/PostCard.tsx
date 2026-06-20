@@ -9,6 +9,7 @@ import MediaEmbed from '@/components/feed/MediaEmbed'
 import VibeCheck from '@/components/feed/VibeCheck'
 import CommentsSection from '@/components/feed/CommentsSection'
 import IncelicarButton from '@/components/feed/IncelicarButton'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 import { relativeTime } from '@/lib/utils'
 import type { OriginalPost, Post } from '@/types'
 
@@ -27,11 +28,12 @@ type Props = {
 }
 
 export default function PostCard({ post, currentUserId }: Props) {
-  const [showComments,   setShowComments]   = useState(false)
-  const [deleted,        setDeleted]        = useState(false)
-  const [deleting,       setDeleting]       = useState(false)
-  const [commentCount,   setCommentCount]   = useState(0)
-  const [previewComment, setPreviewComment] = useState<CommentPreview | null>(null)
+  const [showComments,    setShowComments]    = useState(false)
+  const [deleted,         setDeleted]         = useState(false)
+  const [deleting,        setDeleting]        = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [commentCount,    setCommentCount]    = useState(0)
+  const [previewComment,  setPreviewComment]  = useState<CommentPreview | null>(null)
 
   const supabase = useMemo(() => createClient(), [])
   const profile  = post.profiles
@@ -82,11 +84,10 @@ export default function PostCard({ post, currentUserId }: Props) {
     return () => { live = false; supabase.removeChannel(ch) }
   }, [supabase, post.id])
 
-  async function handleDelete() {
-    if (!window.confirm('Tem certeza que quer deletar esse post?')) return
+  async function confirmDelete() {
     setDeleting(true)
     const { error } = await supabase.from('posts').delete().eq('id', post.id)
-    if (error) setDeleting(false)
+    if (error) { setDeleting(false); setShowDeleteModal(false) }
     else       setDeleted(true)
   }
 
@@ -99,41 +100,144 @@ export default function PostCard({ post, currentUserId }: Props) {
   // ── Repost layout ────────────────────────────────────────────────────────────
   if (post.original_post) {
     return (
+      <>
+        <article className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 transition-colors hover:border-zinc-700">
+
+          {/* "X incelicou" banner */}
+          <div className="mb-3 flex items-center gap-2 text-xs text-zinc-500">
+            <RepeatIcon className="h-3.5 w-3.5 shrink-0 text-zinc-600" />
+            <Link href={`/profile/${profile.username}`} className="font-semibold text-zinc-400 transition-colors hover:text-zinc-200">
+              {profile.display_name}
+            </Link>
+            <span>incelicou</span>
+            <span className="text-zinc-700">·</span>
+            <time dateTime={post.created_at}>{relativeTime(post.created_at)}</time>
+
+            {isOwner && (
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(true)}
+                disabled={deleting}
+                aria-label="Deletar incelicada"
+                className="ml-auto rounded-lg p-1 text-zinc-700 transition-colors hover:bg-red-950/50 hover:text-red-400 disabled:opacity-40"
+              >
+                <TrashIcon className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Reposter's comment */}
+          {post.repost_comment && (
+            <p className="mb-3 text-sm leading-relaxed text-zinc-200">{post.repost_comment}</p>
+          )}
+
+          <OriginalPostCard original={post.original_post} />
+
+          {/* Action bar */}
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-zinc-800 pt-3">
+            <VibeCheck postId={post.id} initialVibes={post.vibes} currentUserId={currentUserId} />
+            <button
+              type="button"
+              onClick={() => setShowComments(v => !v)}
+              className="ml-auto shrink-0 text-xs text-zinc-500 transition-colors hover:text-zinc-300"
+            >
+              💬 {commentLabel}
+            </button>
+          </div>
+
+          {!showComments && previewComment && (
+            <CommentPreviewBanner
+              preview={previewComment}
+              onClick={() => setShowComments(true)}
+            />
+          )}
+
+          {showComments && (
+            <CommentsSection postId={post.id} currentUserId={currentUserId} />
+          )}
+        </article>
+
+        {showDeleteModal && (
+          <ConfirmModal
+            message="Tem certeza que quer deletar esse post?"
+            confirmLabel="Deletar"
+            loading={deleting}
+            onConfirm={confirmDelete}
+            onCancel={() => setShowDeleteModal(false)}
+          />
+        )}
+      </>
+    )
+  }
+
+  // ── Original post layout ─────────────────────────────────────────────────────
+  return (
+    <>
       <article className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 transition-colors hover:border-zinc-700">
 
-        {/* "X incelicou" banner */}
-        <div className="mb-3 flex items-center gap-2 text-xs text-zinc-500">
-          <RepeatIcon className="h-3.5 w-3.5 shrink-0 text-zinc-600" />
-          <Link href={`/profile/${profile.username}`} className="font-semibold text-zinc-400 transition-colors hover:text-zinc-200">
-            {profile.display_name}
+        {/* Header */}
+        <div className="flex items-start gap-3">
+          <Link href={`/profile/${profile.username}`} className="shrink-0">
+            <Avatar src={profile.avatar_url} name={profile.display_name} size="md" />
           </Link>
-          <span>incelicou</span>
-          <span className="text-zinc-700">·</span>
-          <time dateTime={post.created_at}>{relativeTime(post.created_at)}</time>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <Link
+                href={`/profile/${profile.username}`}
+                className="truncate font-semibold leading-tight text-zinc-100 hover:underline"
+              >
+                {profile.display_name}
+              </Link>
+              <span className="truncate text-xs text-zinc-500">@{profile.username}</span>
+              <span className="text-xs text-zinc-700">·</span>
+              <time dateTime={post.created_at} className="shrink-0 text-xs text-zinc-500">
+                {relativeTime(post.created_at)}
+              </time>
+            </div>
+
+            {post.category && (
+              <div className="mt-1">
+                <CategoryBadge category={post.category} />
+              </div>
+            )}
+          </div>
 
           {isOwner && (
             <button
               type="button"
-              onClick={handleDelete}
+              onClick={() => setShowDeleteModal(true)}
               disabled={deleting}
-              aria-label="Deletar incelicada"
-              className="ml-auto rounded-lg p-1 text-zinc-700 transition-colors hover:bg-red-950/50 hover:text-red-400 disabled:opacity-40"
+              aria-label="Deletar post"
+              title="Deletar post"
+              className="ml-1 shrink-0 rounded-lg p-1.5 text-zinc-600 transition-colors hover:bg-red-950/50 hover:text-red-400 disabled:opacity-40"
             >
-              <TrashIcon className="h-3.5 w-3.5" />
+              {deleting
+                ? <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56" strokeLinecap="round" /></svg>
+                : <TrashIcon className="h-4 w-4" />
+              }
             </button>
           )}
         </div>
 
-        {/* Reposter's comment */}
-        {post.repost_comment && (
-          <p className="mb-3 text-sm leading-relaxed text-zinc-200">{post.repost_comment}</p>
-        )}
+        {post.content && <PostText text={post.content} />}
 
-        <OriginalPostCard original={post.original_post} />
+        <MediaEmbed spotifyUrl={post.spotify_url} youtubeUrl={post.youtube_url} />
 
         {/* Action bar */}
         <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-zinc-800 pt-3">
           <VibeCheck postId={post.id} initialVibes={post.vibes} currentUserId={currentUserId} />
+
+          {currentUserId !== post.user_id && (
+            <IncelicarButton
+              postId={post.id}
+              postOwnerId={post.user_id}
+              currentUserId={currentUserId}
+              initialRepostCount={post.repost_count}
+              original={post as unknown as OriginalPost}
+            />
+          )}
+
           <button
             type="button"
             onClick={() => setShowComments(v => !v)}
@@ -154,96 +258,17 @@ export default function PostCard({ post, currentUserId }: Props) {
           <CommentsSection postId={post.id} currentUserId={currentUserId} />
         )}
       </article>
-    )
-  }
 
-  // ── Original post layout ─────────────────────────────────────────────────────
-  return (
-    <article className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 transition-colors hover:border-zinc-700">
-
-      {/* Header */}
-      <div className="flex items-start gap-3">
-        <Link href={`/profile/${profile.username}`} className="shrink-0">
-          <Avatar src={profile.avatar_url} name={profile.display_name} size="md" />
-        </Link>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <Link
-              href={`/profile/${profile.username}`}
-              className="truncate font-semibold leading-tight text-zinc-100 hover:underline"
-            >
-              {profile.display_name}
-            </Link>
-            <span className="truncate text-xs text-zinc-500">@{profile.username}</span>
-            <span className="text-xs text-zinc-700">·</span>
-            <time dateTime={post.created_at} className="shrink-0 text-xs text-zinc-500">
-              {relativeTime(post.created_at)}
-            </time>
-          </div>
-
-          {post.category && (
-            <div className="mt-1">
-              <CategoryBadge category={post.category} />
-            </div>
-          )}
-        </div>
-
-        {isOwner && (
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={deleting}
-            aria-label="Deletar post"
-            title="Deletar post"
-            className="ml-1 shrink-0 rounded-lg p-1.5 text-zinc-600 transition-colors hover:bg-red-950/50 hover:text-red-400 disabled:opacity-40"
-          >
-            {deleting
-              ? <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56" strokeLinecap="round" /></svg>
-              : <TrashIcon className="h-4 w-4" />
-            }
-          </button>
-        )}
-      </div>
-
-      {post.content && <PostText text={post.content} />}
-
-      <MediaEmbed spotifyUrl={post.spotify_url} youtubeUrl={post.youtube_url} />
-
-      {/* Action bar */}
-      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-zinc-800 pt-3">
-        <VibeCheck postId={post.id} initialVibes={post.vibes} currentUserId={currentUserId} />
-
-        {currentUserId !== post.user_id && (
-          <IncelicarButton
-            postId={post.id}
-            postOwnerId={post.user_id}
-            currentUserId={currentUserId}
-            initialRepostCount={post.repost_count}
-            original={post as unknown as OriginalPost}
-          />
-        )}
-
-        <button
-          type="button"
-          onClick={() => setShowComments(v => !v)}
-          className="ml-auto shrink-0 text-xs text-zinc-500 transition-colors hover:text-zinc-300"
-        >
-          💬 {commentLabel}
-        </button>
-      </div>
-
-      {!showComments && previewComment && (
-        <CommentPreviewBanner
-          preview={previewComment}
-          onClick={() => setShowComments(true)}
+      {showDeleteModal && (
+        <ConfirmModal
+          message="Tem certeza que quer deletar esse post?"
+          confirmLabel="Deletar"
+          loading={deleting}
+          onConfirm={confirmDelete}
+          onCancel={() => setShowDeleteModal(false)}
         />
       )}
-
-      {showComments && (
-        <CommentsSection postId={post.id} currentUserId={currentUserId} />
-      )}
-    </article>
+    </>
   )
 }
 

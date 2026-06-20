@@ -78,6 +78,11 @@ export interface Story {
   profiles:   StoryProfile
 }
 
+export interface StoryGroup {
+  user:    StoryProfile
+  stories: Story[]
+}
+
 export interface Post {
   id:             string
   user_id:        string

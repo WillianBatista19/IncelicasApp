@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Avatar from '@/components/Avatar'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 import { relativeTime } from '@/lib/utils'
 import MentionInput from '@/components/feed/MentionInput'
 
@@ -42,6 +43,8 @@ export default function CommentsSection({ postId, currentUserId }: Props) {
   const [replyText,       setReplyText]       = useState('')
   const [replySubmitting, setReplySubmitting] = useState(false)
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set())
+  const [deleteId,        setDeleteId]        = useState<string | null>(null)
+  const [deleting,        setDeleting]        = useState(false)
 
   useEffect(() => {
     supabase
@@ -183,7 +186,20 @@ export default function CommentsSection({ postId, currentUserId }: Props) {
     })
   }
 
+  async function deleteComment() {
+    if (!deleteId) return
+    setDeleting(true)
+    const { error } = await supabase.from('comments').delete().eq('id', deleteId)
+    if (!error) {
+      // Remove the comment and any direct replies (CASCADE handles DB side)
+      setAll(prev => prev.filter(c => c.id !== deleteId && c.parent_id !== deleteId))
+    }
+    setDeleteId(null)
+    setDeleting(false)
+  }
+
   return (
+    <>
     <div className="mt-3 space-y-3 border-t border-zinc-800 pt-3">
 
       {loading ? (
@@ -207,9 +223,19 @@ export default function CommentsSection({ postId, currentUserId }: Props) {
                 <div className="flex gap-2">
                   <Avatar src={comment.profiles.avatar_url} name={authorName} size="sm" />
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-baseline gap-x-2">
+                    <div className="flex items-baseline gap-x-2">
                       <span className="text-xs font-semibold text-zinc-300">{authorName}</span>
                       <span className="text-[10px] text-zinc-600">{relativeTime(comment.created_at)}</span>
+                      {currentUserId === comment.user_id && (
+                        <button
+                          type="button"
+                          onClick={() => setDeleteId(comment.id)}
+                          aria-label="Deletar comentário"
+                          className="ml-auto text-zinc-700 transition-colors hover:text-red-400"
+                        >
+                          <MiniTrashIcon />
+                        </button>
+                      )}
                     </div>
                     <CommentText text={comment.content} />
                     <div className="mt-1 flex items-center gap-3">
@@ -257,9 +283,19 @@ export default function CommentsSection({ postId, currentUserId }: Props) {
                         <li key={reply.id} className="flex gap-2">
                           <Avatar src={reply.profiles.avatar_url} name={replyAuthor} size="sm" />
                           <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-baseline gap-x-2">
+                            <div className="flex items-baseline gap-x-2">
                               <span className="text-xs font-semibold text-zinc-300">{replyAuthor}</span>
                               <span className="text-[10px] text-zinc-600">{relativeTime(reply.created_at)}</span>
+                              {currentUserId === reply.user_id && (
+                                <button
+                                  type="button"
+                                  onClick={() => setDeleteId(reply.id)}
+                                  aria-label="Deletar resposta"
+                                  className="ml-auto text-zinc-700 transition-colors hover:text-red-400"
+                                >
+                                  <MiniTrashIcon />
+                                </button>
+                              )}
                             </div>
                             <CommentText text={reply.content} />
                             <div className="mt-1">
@@ -326,6 +362,17 @@ export default function CommentsSection({ postId, currentUserId }: Props) {
         </form>
       )}
     </div>
+
+    {deleteId && (
+      <ConfirmModal
+        message="Tem certeza que quer deletar esse comentário?"
+        confirmLabel="Deletar"
+        loading={deleting}
+        onConfirm={deleteComment}
+        onCancel={() => setDeleteId(null)}
+      />
+    )}
+    </>
   )
 }
 
@@ -370,6 +417,17 @@ function HeartIcon({ filled, className }: { filled: boolean; className?: string 
   return (
     <svg className={className} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+  )
+}
+
+function MiniTrashIcon() {
+  return (
+    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
     </svg>
   )
 }
