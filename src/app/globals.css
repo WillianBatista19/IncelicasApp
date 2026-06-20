@@ -2,42 +2,104 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   THEME VARIABLES
+   zinc-* values are raw R G B triplets (no rgb() wrapper) so Tailwind's opacity
+   modifier syntax keeps working:  bg-zinc-900/60 → rgb(var(--zinc-900) / 0.6)
+
+   DARK  (default, [data-theme="dark"])  — standard Tailwind zinc palette
+   LIGHT ([data-theme="light"])          — inverted: low numbers = dark text,
+                                           high numbers = white/pink-purple surfaces
+   ───────────────────────────────────────────────────────────────────────────── */
+
+:root,
+[data-theme="dark"] {
+  --zinc-50:  250 250 250;
+  --zinc-100: 244 244 245;
+  --zinc-200: 228 228 231;
+  --zinc-300: 212 212 216;
+  --zinc-400: 161 161 170;
+  --zinc-500: 113 113 122;
+  --zinc-600:  82  82  91;
+  --zinc-700:  63  63  70;
+  --zinc-800:  39  39  42;
+  --zinc-900:  24  24  27;
+  --zinc-950:   9   9  11;
+
+  --auth-radial: radial-gradient(ellipse 80% 60% at 50% 0%, #2a0d1a 0%, #09090b 60%);
+
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  /* Text:   100–400 = dark text hierarchy, 500 = neutral midpoint, 600 = light muted */
+  --zinc-100: 24  24  27;   /* #18181b  — primary text (near-black)          */
+  --zinc-200: 39  39  42;   /* #27272a                                        */
+  --zinc-300: 63  63  70;   /* #3f3f46                                        */
+  --zinc-400: 82  82  91;   /* #52525b  — secondary text                      */
+  --zinc-500: 113 113 122;  /* #71717a  — muted text (same midpoint)          */
+  --zinc-600: 161 161 170;  /* #a1a1aa  — dim/placeholder text                */
+
+  /* Surfaces & borders: 700–950 = light pink-purple palette  */
+  /* zinc-700 is used for hover-bg, strong chips, active chips */
+  --zinc-700: 245 235 255;  /* #f5ebff  — lightest hover / chip surface       */
+
+  /* zinc-800 = PRIMARY BORDER COLOR (#e4d4f4) AND input tint.
+     border-zinc-800 on cards → visible purple border ✓
+     bg-zinc-800/60 on inputs → rgba(228,212,244,.6) ≈ #eee5f8 light purple ✓ */
+  --zinc-800: 228 212 244;  /* #e4d4f4  — purple border & input surface       */
+
+  /* zinc-900 = card/panel surface.
+     Calculated so that bg-zinc-900/60 on white = exactly #fdf4ff (user spec):
+       x*0.6 + 255*0.4 = 253 → x ≈ 252
+       y*0.6 + 255*0.4 = 244 → y ≈ 237
+       z*0.6 + 255*0.4 = 255 → z = 255                                       */
+  --zinc-900: 252 237 255;  /* #fcedff  → at /60 on white = #fdf4ff ✓        */
+
+  /* zinc-950 = page background, navbar, modal backgrounds */
+  --zinc-950: 255 255 255;  /* #ffffff  — pure white                          */
+
+  --auth-radial: radial-gradient(ellipse 80% 60% at 50% 0%, #fce7f3 0%, #ffffff 60%);
+
+  color-scheme: light;
+}
+
+/* ─── Base ─────────────────────────────────────────────────────────────────── */
 @layer base {
   *,
   *::before,
-  *::after {
-    box-sizing: border-box;
-  }
-
-  html {
-    font-family: Arial, 'Helvetica Neue', Helvetica, system-ui, sans-serif;
-    background-color: #0c0c0f;
-    color-scheme: dark;
-  }
+  *::after { box-sizing: border-box; }
 
   body {
-    @apply bg-[#0c0c0f] text-zinc-100 antialiased;
+    @apply bg-zinc-950 text-zinc-100 antialiased;
     min-height: 100dvh;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
-  /* Pink focus ring for all interactive elements */
   :focus-visible {
     outline: 2px solid #D4537E;
     outline-offset: 2px;
     border-radius: 8px;
   }
 
-  /* Custom scrollbar */
   ::-webkit-scrollbar       { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 99px; }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--zinc-700));
+    border-radius: 99px;
+  }
   ::-webkit-scrollbar-thumb:hover { background: #D4537E; }
+
+  /* Logo prefix: pink in dark, near-black in light */
+  .logo-prefix { color: #D4537E; }
+  [data-theme="light"] .logo-prefix { color: rgb(var(--zinc-100)); }
 }
 
+/* ─── Component utilities ───────────────────────────────────────────────────── */
 @layer components {
   .input-base {
-    @apply w-full rounded-xl bg-zinc-800/60 border border-zinc-700
-           px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500
+    @apply w-full rounded-xl bg-zinc-800/60 border border-zinc-800
+           px-4 py-3 text-sm text-zinc-100 placeholder-zinc-600
            transition-colors duration-150
            focus:outline-none focus:border-pink focus:ring-1 focus:ring-pink;
   }

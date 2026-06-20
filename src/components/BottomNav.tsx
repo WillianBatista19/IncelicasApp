@@ -7,6 +7,7 @@ import { useUser } from '@/context/UserContext'
 import { createClient } from '@/lib/supabase/client'
 import { useUnreadCount } from '@/hooks/useUnreadCount'
 import Avatar from '@/components/Avatar'
+import ThemeToggle from '@/components/ThemeToggle'
 
 export default function BottomNav() {
   const { user }  = useUser()
@@ -68,6 +69,9 @@ export default function BottomNav() {
           </span>
         </NavLink>
 
+        {/* Theme toggle */}
+        <ThemeToggle className="flex flex-1 items-center justify-center text-zinc-500 transition-colors hover:text-zinc-300" />
+
         {/* Profile — avatar with pink ring when active */}
         <Link
           href={profileHref}
@@ -90,8 +94,6 @@ export default function BottomNav() {
   )
 }
 
-// ── Shared tab link ─────────────────────────────────────────────────────────
-
 function NavLink({
   href, active, label, children,
 }: {
@@ -112,8 +114,6 @@ function NavLink({
     </Link>
   )
 }
-
-// ── Icons (Tabler-style, 2px stroke) ────────────────────────────────────────
 
 function HomeIcon() {
   return (
