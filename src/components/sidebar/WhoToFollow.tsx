@@ -61,7 +61,6 @@ export default async function WhoToFollow({ currentUserId }: Props) {
 
                 <FollowButton
                   targetUserId={profile.id}
-                  initialIsFollowing={false}
                   currentUserId={currentUserId}
                 />
               </li>
