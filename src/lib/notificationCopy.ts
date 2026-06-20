@@ -27,6 +27,8 @@ export function notificationText(
       return `${actorName} te seguiu de volta, incelica!`
     case 'comment_reply':
       return `${actorName} respondeu seu comentário`
+    case 'comment_like':
+      return `${actorName} curtiu seu comentário`
   }
 }
 
@@ -39,6 +41,7 @@ export function notificationEmoji(type: NotificationType): string {
     case 'repost':        return '🔁'
     case 'follow_back':   return '💜'
     case 'comment_reply': return '↩️'
+    case 'comment_like':  return '❤️'
   }
 }
 

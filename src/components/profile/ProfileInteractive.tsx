@@ -1,10 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Avatar from '@/components/Avatar'
 import FollowButton from '@/components/profile/FollowButton'
 import FollowListModal from '@/components/profile/FollowListModal'
+import StoryViewer from '@/components/stories/StoryViewer'
+import { createClient } from '@/lib/supabase/client'
+import type { Story, StoryGroup } from '@/types'
 
 type Profile = {
   id:           string
@@ -33,6 +36,32 @@ export default function ProfileInteractive({
 }: Props) {
   const [followerCount, setFollowerCount] = useState(initialFollowerCount)
   const [activeModal,   setActiveModal]   = useState<'followers' | 'following' | null>(null)
+  const [storyGroup,    setStoryGroup]    = useState<StoryGroup | null>(null)
+  const [viewerOpen,    setViewerOpen]    = useState(false)
+  const [viewedIds,     setViewedIds]     = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase
+      .from('stories')
+      .select('id, user_id, media_url, created_at, expires_at, profiles!stories_user_id_fkey(id, username, display_name, avatar_url)')
+      .eq('user_id', profile.id)
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: true })
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setStoryGroup({
+            user: {
+              id:           profile.id,
+              username:     profile.username,
+              display_name: profile.display_name ?? null,
+              avatar_url:   profile.avatar_url   ?? null,
+            },
+            stories: data as unknown as Story[],
+          })
+        }
+      })
+  }, [profile.id, profile.username, profile.display_name, profile.avatar_url])
 
   function handleFollowChange(isNowFollowing: boolean) {
     setFollowerCount(c => (isNowFollowing ? c + 1 : c - 1))
@@ -45,7 +74,22 @@ export default function ProfileInteractive({
 
       {/* Avatar row */}
       <div className="flex items-start justify-between gap-4">
-        <Avatar src={profile.avatar_url} name={name} size="lg" />
+        {storyGroup ? (
+          <button
+            type="button"
+            onClick={() => setViewerOpen(true)}
+            aria-label={`Ver história de ${name}`}
+            className="shrink-0 rounded-full bg-gradient-to-tr from-[#D4537E] to-[#7F77DD] p-[3px]"
+          >
+            <div className="rounded-full bg-zinc-900 p-[2px]">
+              <Avatar src={profile.avatar_url} name={name} size="lg" />
+            </div>
+          </button>
+        ) : (
+          <div className="shrink-0">
+            <Avatar src={profile.avatar_url} name={name} size="lg" />
+          </div>
+        )}
 
         {isOwnProfile ? (
           <Link
@@ -101,6 +145,27 @@ export default function ProfileInteractive({
           profileId={profile.id}
           currentUserId={currentUserId}
           onClose={() => setActiveModal(null)}
+        />
+      )}
+
+      {viewerOpen && storyGroup && (
+        <StoryViewer
+          groups={[storyGroup]}
+          initialGroupIndex={0}
+          currentUserId={currentUserId}
+          viewedIds={viewedIds}
+          onMarkViewed={(storyId) => {
+            setViewedIds(prev => { const n = new Set(prev); n.add(storyId); return n })
+          }}
+          onStoryDeleted={(storyId) => {
+            setStoryGroup(prev => {
+              if (!prev) return null
+              const remaining = prev.stories.filter(s => s.id !== storyId)
+              return remaining.length > 0 ? { ...prev, stories: remaining } : null
+            })
+            setViewerOpen(false)
+          }}
+          onClose={() => setViewerOpen(false)}
         />
       )}
     </div>

@@ -28,9 +28,9 @@ export default async function TrendingSidebar() {
               </span>
               <Link
                 href={`/hashtag/${tag}`}
-                className="inline-flex items-center rounded-full border border-[#D4537E]/30 bg-[#D4537E]/10 px-2.5 py-0.5 text-xs font-semibold text-[#D4537E] transition-colors hover:bg-[#D4537E]/20"
+                className="inline-flex min-w-0 max-w-[9rem] items-center overflow-hidden rounded-full border border-[#D4537E]/30 bg-[#D4537E]/10 px-2.5 py-0.5 text-xs font-semibold text-[#D4537E] transition-colors hover:bg-[#D4537E]/20"
               >
-                #{tag}
+                <span className="truncate">#{tag}</span>
               </Link>
               <span className="ml-auto text-xs tabular-nums text-zinc-600">
                 {post_count} post{Number(post_count) !== 1 ? 's' : ''}

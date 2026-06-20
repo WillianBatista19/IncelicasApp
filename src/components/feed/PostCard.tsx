@@ -62,7 +62,7 @@ export default function PostCard({ post, currentUserId }: Props) {
         if (!live) return
         if (!data || data.length === 0) { setPreviewComment(null); return }
         // data[0] is already the most recent; only swap if a later row has more likes
-        const best = (data as PreviewRow[]).reduce((a, b) =>
+        const best = (data as unknown as PreviewRow[]).reduce((a, b) =>
           (b.comment_likes?.length ?? 0) > (a.comment_likes?.length ?? 0) ? b : a
         )
         if (live) setPreviewComment({ id: best.id, content: best.content, profiles: best.profiles })

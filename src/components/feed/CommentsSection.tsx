@@ -24,11 +24,7 @@ type Props = {
   currentUserId: string | null
 }
 
-const SELECT = [
-  'id, user_id, parent_id, content, created_at',
-  'profiles (display_name, username, avatar_url)',
-  'comment_likes (id, user_id)',
-].join(', ') as const
+const SELECT = 'id, user_id, parent_id, content, created_at, profiles (display_name, username, avatar_url), comment_likes (id, user_id)'
 
 const BLANK_PROFILE = { display_name: null, username: '', avatar_url: null } as const
 
@@ -103,7 +99,7 @@ export default function CommentsSection({ postId, currentUserId }: Props) {
     setReplySubmitting(true)
     setReplyText('')
     setReplyingTo(null)
-    setExpandedReplies(prev => new Set([...prev, parentId]))
+    setExpandedReplies(prev => { const n = new Set(prev); n.add(parentId); return n })
 
     const optimistic: CommentRow = {
       id: `opt-${Date.now()}`, user_id: currentUserId, parent_id: parentId,
