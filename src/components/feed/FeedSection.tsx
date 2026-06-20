@@ -1,17 +1,18 @@
 import StoriesBar from '@/components/stories/StoriesBar'
-import ComposerForm from '@/components/feed/ComposerForm'
+import PostComposer from '@/components/feed/PostComposer'
 import FeedClient from '@/components/feed/FeedClient'
+import type { Profile } from '@/types'
 
 type Props = {
   currentUserId: string
-  createPost:    (fd: FormData) => Promise<void>
+  profile:       Profile
 }
 
-export default function FeedSection({ currentUserId, createPost }: Props) {
+export default function FeedSection({ currentUserId, profile }: Props) {
   return (
     <div className="space-y-4">
       <StoriesBar currentUserId={currentUserId} />
-      <ComposerForm action={createPost} />
+      <PostComposer profile={profile} />
       <FeedClient currentUserId={currentUserId} />
     </div>
   )

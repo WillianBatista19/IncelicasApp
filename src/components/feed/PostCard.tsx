@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Avatar from '@/components/Avatar'
@@ -36,10 +36,22 @@ export default function PostCard({ post, currentUserId }: Props) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [commentCount,    setCommentCount]    = useState(0)
   const [previewComment,  setPreviewComment]  = useState<CommentPreview | null>(null)
+  const [fullscreenImg,   setFullscreenImg]   = useState<string | null>(null)
+
+  const closeFullscreen = useCallback(() => setFullscreenImg(null), [])
+
+  useEffect(() => {
+    if (!fullscreenImg) return
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') closeFullscreen() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [fullscreenImg, closeFullscreen])
 
   const supabase = useMemo(() => createClient(), [])
   const profile  = post.profiles
   const isOwner  = Boolean(currentUserId && currentUserId === post.user_id)
+
+  console.log('[PostCard]', post.id, '| image_url:', post.image_url)
 
   // ── Load comment count + preview; subscribe to realtime count updates ─────────
   useEffect(() => {
@@ -169,6 +181,10 @@ export default function PostCard({ post, currentUserId }: Props) {
             onCancel={() => setShowDeleteModal(false)}
           />
         )}
+
+        {fullscreenImg && (
+          <FullscreenImage src={fullscreenImg} onClose={closeFullscreen} />
+        )}
       </>
     )
   }
@@ -226,6 +242,16 @@ export default function PostCard({ post, currentUserId }: Props) {
 
         {post.content && <PostText text={post.content} />}
 
+        {post.image_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={post.image_url}
+            alt="Imagem do post"
+            onClick={() => setFullscreenImg(post.image_url!)}
+            className="mt-3 max-h-[400px] w-full cursor-zoom-in rounded-xl object-cover"
+          />
+        )}
+
         <MediaEmbed spotifyUrl={post.spotify_url} youtubeUrl={post.youtube_url} />
 
         {/* Action bar */}
@@ -271,6 +297,10 @@ export default function PostCard({ post, currentUserId }: Props) {
           onConfirm={confirmDelete}
           onCancel={() => setShowDeleteModal(false)}
         />
+      )}
+
+      {fullscreenImg && (
+        <FullscreenImage src={fullscreenImg} onClose={closeFullscreen} />
       )}
     </>
   )
@@ -337,6 +367,14 @@ function OriginalPostCard({ original }: { original: OriginalPost }) {
         )}
       </div>
       {original.content && <PostText text={original.content} className="text-zinc-300" />}
+      {original.image_url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={original.image_url}
+          alt="Imagem do post"
+          className="mt-2 max-h-[300px] w-full rounded-lg object-cover"
+        />
+      )}
       {(original.spotify_url || original.youtube_url) && (
         <MediaEmbed spotifyUrl={original.spotify_url} youtubeUrl={original.youtube_url} />
       )}
@@ -378,6 +416,35 @@ function PostText({ text, className }: { text: string; className?: string }) {
         return part
       })}
     </p>
+  )
+}
+
+// ─── Fullscreen image viewer ──────────────────────────────────────────────────
+
+function FullscreenImage({ src, onClose }: { src: string; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt="Imagem em tela cheia"
+        className="max-h-full max-w-full rounded-xl object-contain shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      />
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Fechar"
+        className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-zinc-800/80 text-zinc-300 backdrop-blur hover:bg-zinc-700 hover:text-white"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="h-5 w-5" aria-hidden>
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
   )
 }
 
