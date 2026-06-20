@@ -36,8 +36,6 @@ export default function PostComposer({ profile }: { profile: Profile }) {
 
   const textareaRef   = useRef<HTMLTextAreaElement>(null)
   const galleryRef    = useRef<HTMLInputElement>(null)
-  const cameraBackRef = useRef<HTMLInputElement>(null)
-  const selfieRef     = useRef<HTMLInputElement>(null)
   const previewUrlRef = useRef<string | null>(null)
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const supabase      = useMemo(() => createClient(), [])
@@ -104,9 +102,16 @@ export default function PostComposer({ profile }: { profile: Profile }) {
     setMediaType(null)
     setMediaError(null)
     setAlbumArtUrl(null)
-    if (galleryRef.current)    galleryRef.current.value    = ''
-    if (cameraBackRef.current) cameraBackRef.current.value = ''
-    if (selfieRef.current)     selfieRef.current.value     = ''
+    if (galleryRef.current) galleryRef.current.value = ''
+  }
+
+  function triggerCamera(mode: 'environment' | 'user') {
+    const input    = document.createElement('input')
+    input.type     = 'file'
+    input.accept   = 'image/*'
+    input.capture  = mode
+    input.onchange = (e) => handleMedia((e.target as HTMLInputElement).files?.[0] ?? null)
+    input.click()
   }
 
   async function fetchNowPlaying() {
@@ -231,22 +236,6 @@ export default function PostComposer({ profile }: { profile: Profile }) {
         className="hidden"
         onChange={e => handleMedia(e.target.files?.[0] ?? null)}
       />
-      <input
-        ref={cameraBackRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={e => handleMedia(e.target.files?.[0] ?? null)}
-      />
-      <input
-        ref={selfieRef}
-        type="file"
-        accept="image/*"
-        capture="user"
-        className="hidden"
-        onChange={e => handleMedia(e.target.files?.[0] ?? null)}
-      />
 
       <form onSubmit={submit} noValidate className="w-full">
 
@@ -298,14 +287,14 @@ export default function PostComposer({ profile }: { profile: Profile }) {
                 <div className="absolute left-0 top-full z-20 mt-1.5 w-44 rounded-xl border border-zinc-700 bg-zinc-900 p-1 shadow-xl">
                   <button
                     type="button"
-                    onClick={() => { setShowCameraMenu(false); cameraBackRef.current?.click() }}
+                    onClick={() => { setShowCameraMenu(false); triggerCamera('environment') }}
                     className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
                   >
                     <span>📷</span> Câmera traseira
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setShowCameraMenu(false); selfieRef.current?.click() }}
+                    onClick={() => { setShowCameraMenu(false); triggerCamera('user') }}
                     className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
                   >
                     <span>🤳</span> Selfie
