@@ -40,13 +40,13 @@ export default async function FeedPage() {
   if (!user) redirect('/login')
 
   return (
-    <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+    <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
 
       {/* ── Main feed column ── */}
       <FeedSection currentUserId={user.id} createPost={createPost} />
 
-      {/* ── Right sidebar (desktop only) ── */}
-      <aside className="hidden lg:flex lg:flex-col lg:gap-4 lg:sticky lg:top-[72px]">
+      {/* ── Right sidebar (wide desktop only, xl+) ── */}
+      <aside className="hidden xl:flex xl:flex-col xl:gap-4 xl:sticky xl:top-[72px]">
         <TrendingSidebar />
         <WhoToFollow currentUserId={user.id} />
       </aside>
