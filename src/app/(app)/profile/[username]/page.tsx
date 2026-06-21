@@ -32,6 +32,17 @@ export default async function ProfilePage({ params }: Props) {
   }
   if (!profile) notFound()
 
+  // watching_now and reading_now are stored as text JSON in Postgres;
+  // parse them when Supabase returns a string instead of an object.
+  function parseJson<T>(raw: unknown): T | null {
+    if (!raw) return null
+    if (typeof raw === 'string') { try { return JSON.parse(raw) as T } catch { return null } }
+    return raw as T
+  }
+
+  const watching = parseJson<WatchingNow>(profile.watching_now)
+  const reading  = parseJson<ReadingNow>(profile.reading_now)
+
   const isOwnProfile = user.id === profile.id
 
   const [postsRes, followersRes, followingRes] = await Promise.all([
@@ -64,8 +75,8 @@ export default async function ProfilePage({ params }: Props) {
         followingCount={followingCount}
       />
       <MediaNowWidgets
-        watching={profile.watching_now as WatchingNow | null}
-        reading={profile.reading_now  as ReadingNow  | null}
+        watching={watching}
+        reading={reading}
         animeTitle={profile.anime_title    as string | null}
         animeCoverUrl={profile.anime_cover_url as string | null}
       />

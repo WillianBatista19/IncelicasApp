@@ -15,23 +15,30 @@ type CoverProps = {
 
 function CoverImage({ src, alt, emoji }: CoverProps) {
   const safeSrc = toHttps(src)
-  if (safeSrc) {
+  if (!safeSrc) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={safeSrc}
-        alt={alt}
-        className="h-16 w-11 flex-shrink-0 rounded-lg object-cover"
-        onError={(e) => {
-          const el = e.currentTarget
-          el.style.display = 'none'
-          const placeholder = el.nextElementSibling as HTMLElement | null
-          if (placeholder) placeholder.style.display = 'flex'
-        }}
-      />
+      <div
+        className="flex h-16 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-xl"
+        aria-hidden
+      >
+        {emoji}
+      </div>
     )
   }
-  return null
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={safeSrc}
+      alt={alt}
+      className="h-16 w-11 flex-shrink-0 rounded-lg object-cover"
+      onError={(e) => {
+        const el = e.currentTarget
+        el.style.display = 'none'
+        const placeholder = el.nextElementSibling as HTMLElement | null
+        if (placeholder) placeholder.style.display = 'flex'
+      }}
+    />
+  )
 }
 
 function CoverPlaceholder({ emoji }: { emoji: string }) {

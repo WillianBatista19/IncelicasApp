@@ -18,6 +18,7 @@ const ENTRIES = [
       '🐛 Corrigido: algoritmo de cores do Termo reescrito com dois passos explícitos e array remaining[] para garantir que letras duplicadas sejam coloridas corretamente (ex: "CARRO" — Rs extras viram cinza, não amarelo)',
       '🐛 Corrigido: estado vazio do Adivinhe a Música agora exibe mensagem orientando o admin a adicionar músicas em /jogar/admin',
       '🐛 Corrigido: erros de RPC (get_daily_word, get_daily_song) agora são logados no console com código e mensagem para facilitar diagnóstico de permissões',
+      '🐛 Corrigido: capas de "Assistindo agora" e "Lendo agora" não apareciam porque a coluna watching_now é armazenada como texto JSON (não jsonb) — o Supabase retornava string ao invés de objeto, causando poster_url undefined. Agora o perfil e o formulário de edição fazem JSON.parse quando o valor é uma string.',
     ],
   },
   {

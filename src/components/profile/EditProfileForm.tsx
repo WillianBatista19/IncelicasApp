@@ -11,6 +11,12 @@ import type { MediaResult } from '@/components/ui/MediaSearchModal'
 import type { AniListResult } from '@/components/ui/AniListSearchModal'
 import type { Profile, WatchingNow, ReadingNow } from '@/types'
 
+function parseJsonField<T>(raw: unknown): T | null {
+  if (!raw) return null
+  if (typeof raw === 'string') { try { return JSON.parse(raw) as T } catch { return null } }
+  return raw as T
+}
+
 export default function EditProfileForm({ profile }: { profile: Profile }) {
   const [displayName,        setDisplayName]        = useState(profile.display_name ?? '')
   const [username,           setUsername]           = useState(profile.username ?? '')
@@ -24,8 +30,8 @@ export default function EditProfileForm({ profile }: { profile: Profile }) {
   const [showDeleteModal,    setShowDeleteModal]    = useState(false)
   const [deleting,           setDeleting]           = useState(false)
   const [deleteError,        setDeleteError]        = useState<string | null>(null)
-  const [watchingNow,        setWatchingNow]        = useState<WatchingNow | null>(profile.watching_now ?? null)
-  const [readingNow,         setReadingNow]         = useState<ReadingNow  | null>(profile.reading_now  ?? null)
+  const [watchingNow,        setWatchingNow]        = useState<WatchingNow | null>(parseJsonField<WatchingNow>(profile.watching_now))
+  const [readingNow,         setReadingNow]         = useState<ReadingNow  | null>(parseJsonField<ReadingNow>(profile.reading_now))
   const [showWatchingSearch, setShowWatchingSearch] = useState(false)
   const [showReadingSearch,  setShowReadingSearch]  = useState(false)
   const [animeTitle,         setAnimeTitle]         = useState<string | null>(profile.anime_title ?? null)
