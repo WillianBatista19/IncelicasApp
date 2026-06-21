@@ -44,6 +44,9 @@ export default function CommentsSection({ postId, currentUserId, highlightCommen
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set())
   const [deleteId,        setDeleteId]        = useState<string | null>(null)
   const [deleting,        setDeleting]        = useState(false)
+  const [editingId,       setEditingId]       = useState<string | null>(null)
+  const [editText,        setEditText]        = useState('')
+  const [editSaving,      setEditSaving]      = useState(false)
   const [highlightedId,   setHighlightedId]   = useState<string | null>(highlightCommentId ?? null)
 
   useEffect(() => {
@@ -218,6 +221,26 @@ export default function CommentsSection({ postId, currentUserId, highlightCommen
     setDeleting(false)
   }
 
+  function startEdit(comment: CommentRow) {
+    setEditingId(comment.id)
+    setEditText(comment.content)
+  }
+
+  async function saveEdit() {
+    const trimmed = editText.trim()
+    if (!trimmed || !editingId || editSaving) return
+    setEditSaving(true)
+    const { error } = await supabase
+      .from('comments')
+      .update({ content: trimmed })
+      .eq('id', editingId)
+    if (!error) {
+      setAll(prev => prev.map(c => c.id === editingId ? { ...c, content: trimmed } : c))
+      setEditingId(null)
+    }
+    setEditSaving(false)
+  }
+
   return (
     <>
     <div className="mt-3 space-y-3 border-t border-zinc-800 pt-3">
@@ -252,17 +275,55 @@ export default function CommentsSection({ postId, currentUserId, highlightCommen
                       {isVerified(comment.profiles.username) && <VerifiedBadge />}
                       <span className="text-[10px] text-zinc-600">{relativeTime(comment.created_at)}</span>
                       {currentUserId === comment.user_id && (
-                        <button
-                          type="button"
-                          onClick={() => setDeleteId(comment.id)}
-                          aria-label="Deletar comentário"
-                          className="ml-auto text-zinc-700 transition-colors hover:text-red-400"
-                        >
-                          <MiniTrashIcon />
-                        </button>
+                        <div className="ml-auto flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => startEdit(comment)}
+                            aria-label="Editar comentário"
+                            className="text-zinc-700 transition-colors hover:text-[#7F77DD]"
+                          >
+                            <MiniPencilIcon />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteId(comment.id)}
+                            aria-label="Deletar comentário"
+                            className="text-zinc-700 transition-colors hover:text-red-400"
+                          >
+                            <MiniTrashIcon />
+                          </button>
+                        </div>
                       )}
                     </div>
-                    <CommentText text={comment.content} />
+                    {editingId === comment.id ? (
+                      <div className="mt-1">
+                        <textarea
+                          value={editText}
+                          onChange={e => setEditText(e.target.value)}
+                          rows={2}
+                          className="w-full resize-none rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-xs leading-relaxed text-zinc-200 outline-none focus:border-[#7F77DD]"
+                        />
+                        <div className="mt-1 flex gap-2">
+                          <button
+                            type="button"
+                            onClick={saveEdit}
+                            disabled={editSaving || !editText.trim()}
+                            className="rounded-lg px-4 py-2 text-sm font-semibold text-[#7F77DD] transition-colors hover:text-[#9f99ee] disabled:opacity-40"
+                          >
+                            {editSaving ? '…' : 'Salvar'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingId(null)}
+                            className="rounded-lg px-4 py-2 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-400"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <CommentText text={comment.content} />
+                    )}
                     <div className="mt-1 flex items-center gap-3">
                       {currentUserId && (
                         <button
@@ -317,17 +378,55 @@ export default function CommentsSection({ postId, currentUserId, highlightCommen
                               {isVerified(reply.profiles.username) && <VerifiedBadge />}
                               <span className="text-[10px] text-zinc-600">{relativeTime(reply.created_at)}</span>
                               {currentUserId === reply.user_id && (
-                                <button
-                                  type="button"
-                                  onClick={() => setDeleteId(reply.id)}
-                                  aria-label="Deletar resposta"
-                                  className="ml-auto text-zinc-700 transition-colors hover:text-red-400"
-                                >
-                                  <MiniTrashIcon />
-                                </button>
+                                <div className="ml-auto flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => startEdit(reply)}
+                                    aria-label="Editar resposta"
+                                    className="text-zinc-700 transition-colors hover:text-[#7F77DD]"
+                                  >
+                                    <MiniPencilIcon />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setDeleteId(reply.id)}
+                                    aria-label="Deletar resposta"
+                                    className="text-zinc-700 transition-colors hover:text-red-400"
+                                  >
+                                    <MiniTrashIcon />
+                                  </button>
+                                </div>
                               )}
                             </div>
-                            <CommentText text={reply.content} />
+                            {editingId === reply.id ? (
+                              <div className="mt-1">
+                                <textarea
+                                  value={editText}
+                                  onChange={e => setEditText(e.target.value)}
+                                  rows={2}
+                                  className="w-full resize-none rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-xs leading-relaxed text-zinc-200 outline-none focus:border-[#7F77DD]"
+                                />
+                                <div className="mt-1 flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={saveEdit}
+                                    disabled={editSaving || !editText.trim()}
+                                    className="rounded-lg px-4 py-2 text-sm font-semibold text-[#7F77DD] transition-colors hover:text-[#9f99ee] disabled:opacity-40"
+                                  >
+                                    {editSaving ? '…' : 'Salvar'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingId(null)}
+                                    className="rounded-lg px-4 py-2 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-400"
+                                  >
+                                    Cancelar
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <CommentText text={reply.content} />
+                            )}
                             <div className="mt-1">
                               <LikeButton
                                 liked={replyLiked}
@@ -447,6 +546,15 @@ function HeartIcon({ filled, className }: { filled: boolean; className?: string 
   return (
     <svg className={className} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+  )
+}
+
+function MiniPencilIcon() {
+  return (
+    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
     </svg>
   )
 }

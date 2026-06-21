@@ -54,6 +54,11 @@ const PostCard = memo(function PostCard({ post, currentUserId, initialShowCommen
   const [commentCount,    setCommentCount]    = useState(0)
   const [previewComment,  setPreviewComment]  = useState<CommentPreview | null>(null)
   const [fullscreenImg,   setFullscreenImg]   = useState<string | null>(null)
+  const [showMenu,        setShowMenu]        = useState(false)
+  const [editing,         setEditing]         = useState(false)
+  const [editContent,     setEditContent]     = useState(post.content)
+  const [localContent,    setLocalContent]    = useState(post.content)
+  const [editSaving,      setEditSaving]      = useState(false)
 
   const supabase = useMemo(() => createClient(), [])
   const profile  = post.profiles
@@ -116,6 +121,27 @@ const PostCard = memo(function PostCard({ post, currentUserId, initialShowCommen
     const { error } = await supabase.from('posts').delete().eq('id', post.id)
     if (error) { setDeleting(false); setShowDeleteModal(false) }
     else        setDeleted(true)
+  }
+
+  function startPostEdit() {
+    setEditContent(localContent)
+    setEditing(true)
+    setShowMenu(false)
+  }
+
+  async function savePostEdit() {
+    const trimmed = editContent.trim()
+    if (!trimmed || editSaving) return
+    setEditSaving(true)
+    const { error } = await supabase
+      .from('posts')
+      .update({ content: trimmed })
+      .eq('id', post.id)
+    if (!error) {
+      setLocalContent(trimmed)
+      setEditing(false)
+    }
+    setEditSaving(false)
   }
 
   if (deleted) return null
@@ -226,23 +252,72 @@ const PostCard = memo(function PostCard({ post, currentUserId, initialShowCommen
           </div>
 
           {isOwner && (
-            <button
-              type="button"
-              onClick={() => setShowDeleteModal(true)}
-              disabled={deleting}
-              aria-label="Deletar post"
-              title="Deletar post"
-              className="ml-1 shrink-0 rounded-lg p-1.5 text-zinc-600 transition-colors hover:bg-red-950/50 hover:text-red-400 disabled:opacity-40"
-            >
-              {deleting
-                ? <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56" strokeLinecap="round" /></svg>
-                : <TrashIcon className="h-4 w-4" />
-              }
-            </button>
+            <div className="relative ml-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowMenu(v => !v)}
+                aria-label="Opções do post"
+                className="rounded-lg p-1.5 text-zinc-600 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
+              >
+                <DotsIcon className="h-4 w-4" />
+              </button>
+              {showMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+                  <div className="absolute right-0 top-full z-20 mt-1 w-36 overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 shadow-xl">
+                    <button
+                      type="button"
+                      onClick={startPostEdit}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-300 transition-colors hover:bg-zinc-800"
+                    >
+                      <PencilIcon className="h-3.5 w-3.5 shrink-0" />
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setShowMenu(false); setShowDeleteModal(true) }}
+                      disabled={deleting}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-400 transition-colors hover:bg-red-950/50 disabled:opacity-40"
+                    >
+                      <TrashIcon className="h-3.5 w-3.5 shrink-0" />
+                      Deletar
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </div>
 
-        {post.content && <PostText text={post.content} />}
+        {editing ? (
+          <div className="mt-3">
+            <textarea
+              value={editContent}
+              onChange={e => setEditContent(e.target.value)}
+              rows={4}
+              className="w-full resize-none rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm leading-relaxed text-zinc-200 outline-none focus:border-[#D4537E]"
+            />
+            <div className="mt-2 flex gap-2">
+              <button
+                type="button"
+                onClick={savePostEdit}
+                disabled={editSaving || !editContent.trim()}
+                className="rounded-xl bg-[#D4537E] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#c0446e] disabled:opacity-40"
+              >
+                {editSaving ? '…' : 'Salvar'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditing(false)}
+                className="rounded-xl px-3 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-300"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        ) : (
+          localContent && <PostText text={localContent} />
+        )}
 
         <PostMedia url={post.image_url} onImageClick={setFullscreenImg} />
 
@@ -505,6 +580,25 @@ function FullscreenImage({ src, onClose }: { src: string; onClose: () => void })
 }
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
+
+function DotsIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <circle cx="5" cy="12" r="1.5" />
+      <circle cx="12" cy="12" r="1.5" />
+      <circle cx="19" cy="12" r="1.5" />
+    </svg>
+  )
+}
+
+function PencilIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  )
+}
 
 function TrashIcon({ className }: { className?: string }) {
   return (

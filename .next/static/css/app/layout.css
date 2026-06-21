@@ -2432,6 +2432,10 @@ video {
 .hover\:bg-zinc-800\/60:hover {
   background-color: rgb(var(--zinc-800) / 0.6);
 }
+.hover\:text-\[\#7F77DD\]:hover {
+  --tw-text-opacity: 1;
+  color: rgb(127 119 221 / var(--tw-text-opacity, 1));
+}
 .hover\:text-\[\#9f99ee\]:hover {
   --tw-text-opacity: 1;
   color: rgb(159 153 238 / var(--tw-text-opacity, 1));

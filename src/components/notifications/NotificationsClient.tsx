@@ -63,7 +63,11 @@ export default function NotificationsClient({ initialNotifications, userId }: Pr
       ) : (
         <div className="space-y-2">
           {notifications.map(n => (
-            <NotificationItem key={n.id} notification={n} />
+            <NotificationItem
+              key={n.id}
+              notification={n}
+              onRead={id => setNotifications(prev => prev.map(p => p.id === id ? { ...p, read: true } : p))}
+            />
           ))}
         </div>
       )}
