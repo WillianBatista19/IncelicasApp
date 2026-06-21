@@ -172,6 +172,13 @@ export default function PostComposer({ profile }: { profile: Profile }) {
       const qs   = new URLSearchParams({ method: 'user.getrecenttracks', user: profile.lastfm_username, limit: '1' })
       const res  = await fetch(`/api/lastfm?${qs}`)
       const json = await res.json()
+      console.log('[fetchNowPlaying] status:', res.status, '| raw response:', JSON.stringify(json))
+
+      if (!res.ok) {
+        console.error('[fetchNowPlaying] API error:', json?.error)
+        showToast('Erro ao conectar ao Last.fm. Verifica as configurações.')
+        return
+      }
 
       const raw   = json?.recenttracks?.track
       const track = Array.isArray(raw) ? raw[0] : (raw ?? null)

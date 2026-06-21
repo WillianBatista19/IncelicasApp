@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useUser } from '@/context/UserContext'
 import { createClient } from '@/lib/supabase/client'
 import { useUnreadCount } from '@/hooks/useUnreadCount'
+import { useUnreadMessages } from '@/hooks/useUnreadMessages'
 
 export default function LeftSidebar() {
   const { user, signOut } = useUser()
@@ -13,6 +14,7 @@ export default function LeftSidebar() {
   const router    = useRouter()
   const supabase  = useMemo(() => createClient(), [])
   const unread    = useUnreadCount(user?.id ?? null)
+  const unreadMsg = useUnreadMessages(user?.id ?? null)
 
   const [username, setUsername] = useState<string | null>(null)
 
@@ -44,6 +46,7 @@ export default function LeftSidebar() {
     { href: '/feed',          label: 'Feed',          icon: HomeIcon,    badge: 0 },
     { href: '/explore',       label: 'Explorar',      icon: CompassIcon, badge: 0 },
     { href: '/notifications', label: 'Notificações',  icon: BellIcon,    badge: unread },
+    { href: '/messages',      label: 'Mensagens',     icon: MessageIcon, badge: unreadMsg },
     { href: '/jogar',         label: 'Jogar',         icon: GameIcon,    badge: 0 },
     { href: profileHref,      label: 'Perfil',        icon: UserIcon,    badge: 0 },
   ]
@@ -142,6 +145,14 @@ function UserIcon({ className }: { className?: string }) {
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
       <circle cx="12" cy="7" r="4" />
+    </svg>
+  )
+}
+
+function MessageIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
     </svg>
   )
 }

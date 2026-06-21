@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { getOrCreateConversation } from '@/app/(app)/messages/actions'
 import Avatar from '@/components/Avatar'
 import FollowButton from '@/components/profile/FollowButton'
 import FollowListModal from '@/components/profile/FollowListModal'
@@ -40,6 +41,7 @@ export default function ProfileInteractive({
 }: Props) {
   const router = useRouter()
   const { signOut } = useUser()
+  const [msgLoading, setMsgLoading] = useState(false)
   const [followerCount, setFollowerCount] = useState(initialFollowerCount)
   const [activeModal,   setActiveModal]   = useState<'followers' | 'following' | null>(null)
   const [storyGroup,    setStoryGroup]    = useState<StoryGroup | null>(null)
@@ -121,11 +123,32 @@ export default function ProfileInteractive({
             </button>
           </div>
         ) : (
-          <FollowButton
-            targetUserId={profile.id}
-            currentUserId={currentUserId}
-            onFollowChange={handleFollowChange}
-          />
+          <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+            <FollowButton
+              targetUserId={profile.id}
+              currentUserId={currentUserId}
+              onFollowChange={handleFollowChange}
+            />
+            <button
+              type="button"
+              disabled={msgLoading}
+              onClick={async () => {
+                setMsgLoading(true)
+                try {
+                  const result = await getOrCreateConversation(profile.id)
+                  console.log('[Mensagem] result:', result)
+                  if ('conversationId' in result) {
+                    router.push(`/messages/${result.conversationId}`)
+                  }
+                } finally {
+                  setMsgLoading(false)
+                }
+              }}
+              className="rounded-xl border border-zinc-600 px-3 py-2 text-sm font-medium text-zinc-300 transition-colors hover:border-zinc-400 hover:text-zinc-100 disabled:opacity-50"
+            >
+              {msgLoading ? '…' : '💬 Mensagem'}
+            </button>
+          </div>
         )}
       </div>
 

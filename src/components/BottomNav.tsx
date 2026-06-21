@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useUser } from '@/context/UserContext'
 import { createClient } from '@/lib/supabase/client'
 import { useUnreadCount } from '@/hooks/useUnreadCount'
+import { useUnreadMessages } from '@/hooks/useUnreadMessages'
 import Avatar from '@/components/Avatar'
 import ThemeToggle from '@/components/ThemeToggle'
 
@@ -14,6 +15,7 @@ export default function BottomNav() {
   const pathname  = usePathname()
   const supabase  = useMemo(() => createClient(), [])
   const unread    = useUnreadCount(user?.id ?? null)
+  const unreadMsg = useUnreadMessages(user?.id ?? null)
 
   const [username,    setUsername]    = useState<string | null>(null)
   const [displayName, setDisplayName] = useState<string | null>(null)
@@ -69,9 +71,19 @@ export default function BottomNav() {
           </span>
         </NavLink>
 
-        {/* Jogar */}
-        <NavLink href="/jogar" active={pathname.startsWith('/jogar')} label="Jogar">
-          <GameIcon />
+        {/* Messages */}
+        <NavLink href="/messages" active={pathname.startsWith('/messages')} label="Mensagens">
+          <span className="relative">
+            <MessageIcon />
+            {unreadMsg > 0 && (
+              <span
+                aria-hidden
+                className="absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#D4537E] px-0.5 text-[9px] font-bold leading-none text-white"
+              >
+                {unreadMsg > 99 ? '99+' : unreadMsg}
+              </span>
+            )}
+          </span>
         </NavLink>
 
         {/* Theme toggle */}
@@ -144,6 +156,14 @@ function BellIcon() {
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
       <path d="M13.73 21a2 2 0 01-3.46 0" />
+    </svg>
+  )
+}
+
+function MessageIcon() {
+  return (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
     </svg>
   )
 }

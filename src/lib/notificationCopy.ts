@@ -29,6 +29,8 @@ export function notificationText(
       return `${actorName} respondeu seu comentário`
     case 'comment_like':
       return `${actorName} curtiu seu comentário`
+    case 'message':
+      return `${actorName} te mandou uma mensagem`
   }
 }
 
@@ -42,6 +44,7 @@ export function notificationEmoji(type: NotificationType): string {
     case 'follow_back':   return '💜'
     case 'comment_reply': return '↩️'
     case 'comment_like':  return '❤️'
+    case 'message':       return '💬'
   }
 }
 
@@ -63,6 +66,8 @@ export function notificationHref(
         return commentId ? `/post/${postId}?comment=${commentId}` : `/post/${postId}`
       }
       return `/profile/${username}`
+    case 'message':
+      return '/messages'
     default:
       // vibe, repost, mention
       return postId ? `/post/${postId}` : `/profile/${username}`

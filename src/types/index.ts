@@ -9,6 +9,7 @@ export type NotificationType =
   | 'comment_like'
   | 'repost'
   | 'mention'
+  | 'message'
 
 export interface WatchingNow {
   id:         number
@@ -107,6 +108,26 @@ export interface Story {
 export interface StoryGroup {
   user:    StoryProfile
   stories: Story[]
+}
+
+export interface ConversationMessage {
+  id:              string
+  conversation_id: string
+  sender_id:       string
+  content:         string
+  created_at:      string
+}
+
+export interface ConversationSummary {
+  id:         string
+  lastReadAt: string | null
+  otherUser: {
+    id:           string
+    username:     string
+    display_name: string | null
+    avatar_url:   string | null
+  }
+  lastMessage: ConversationMessage | null
 }
 
 export interface Post {

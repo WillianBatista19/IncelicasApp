@@ -5,7 +5,6 @@
 // This file only holds the "Em breve" section (static, no DB needed).
 
 export const COMING_SOON: string[] = [
-  'Mensagens diretas entre usuários',
   'Editar post após publicar',
   'Busca de posts e conteúdo',
   'Notificações push (Web Push API)',

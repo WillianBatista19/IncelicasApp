@@ -6,7 +6,6 @@ export const dynamic = 'force-dynamic'
 const MONTHS_PT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
 const COMING_SOON = [
-  'Mensagens diretas entre usuários',
   'Busca de posts e conteúdo',
   'Notificações push (Web Push API)',
   'Salvar posts para ver depois',
