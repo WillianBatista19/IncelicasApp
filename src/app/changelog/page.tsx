@@ -32,7 +32,7 @@ export default async function ChangelogPage() {
   const { data, error } = await supabase
     .from('changelog_entries')
     .select('*')
-    .order('entry_date', { ascending: false })
+    .order('id', { ascending: false })
 
   if (error) {
     console.error('[changelog] fetch error:', error.message, error.code)

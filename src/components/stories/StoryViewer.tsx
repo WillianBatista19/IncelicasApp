@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 import Avatar from '@/components/Avatar'
+import StoryViewersModal from '@/components/stories/StoryViewersModal'
 import { relativeTime } from '@/lib/utils'
 import type { StoryGroup } from '@/types'
 
@@ -50,6 +51,12 @@ export default function StoryViewer({
   const [animating,        setAnimating]        = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [deleting,         setDeleting]         = useState(false)
+  const [liked,            setLiked]            = useState(false)
+  const [likeCount,        setLikeCount]        = useState(0)
+  const [viewCount,        setViewCount]        = useState(0)
+  const [likePending,      setLikePending]      = useState(false)
+  const [likeBounce,       setLikeBounce]       = useState(false)
+  const [showViewers,      setShowViewers]      = useState(false)
 
   // Refs so stable callbacks always read the latest values
   const groupIdxRef = useRef(groupIdx)
@@ -141,6 +148,42 @@ export default function StoryViewer({
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose, goNext, goPrev, confirmingDelete])
 
+  // ── Fetch likes + view count whenever the displayed story changes ──────────
+
+  useEffect(() => {
+    if (!story) return
+    let live = true
+    const sid = story.id
+
+    setLiked(false)
+    setLikeCount(0)
+    setViewCount(0)
+
+    void Promise.all([
+      supabase
+        .from('story_likes')
+        .select('user_id', { count: 'exact', head: true })
+        .eq('story_id', sid)
+        .eq('user_id', currentUserId),
+      supabase
+        .from('story_likes')
+        .select('user_id', { count: 'exact', head: true })
+        .eq('story_id', sid),
+      supabase
+        .from('story_views')
+        .select('user_id', { count: 'exact', head: true })
+        .eq('story_id', sid),
+    ]).then(([myLike, allLikes, views]) => {
+      if (!live) return
+      setLiked((myLike.count ?? 0) > 0)
+      setLikeCount(allLikes.count ?? 0)
+      setViewCount(views.count ?? 0)
+    })
+
+    return () => { live = false }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupIdx, storyIdx])
+
   // ── Delete own story ───────────────────────────────────────────────────────
 
   async function handleDeleteStory() {
@@ -174,6 +217,36 @@ export default function StoryViewer({
 
     setDeleting(false)
     setConfirmingDelete(false)
+  }
+
+  async function handleLike() {
+    if (likePending || !story) return
+    const wasLiked  = liked
+    const prevCount = likeCount
+
+    setLiked(!wasLiked)
+    setLikeCount(wasLiked ? prevCount - 1 : prevCount + 1)
+    setLikePending(true)
+    if (!wasLiked) {
+      setLikeBounce(true)
+      setTimeout(() => setLikeBounce(false), 300)
+    }
+
+    if (wasLiked) {
+      const { error } = await supabase
+        .from('story_likes')
+        .delete()
+        .eq('story_id', story.id)
+        .eq('user_id', currentUserId)
+      if (error) { setLiked(wasLiked); setLikeCount(prevCount) }
+    } else {
+      const { error } = await supabase
+        .from('story_likes')
+        .insert({ story_id: story.id, user_id: currentUserId })
+      if (error && error.code !== '23505') { setLiked(wasLiked); setLikeCount(prevCount) }
+    }
+
+    setLikePending(false)
   }
 
   if (!story || !group) return null
@@ -293,16 +366,73 @@ export default function StoryViewer({
           </div>
         )}
 
+        {/* ── Like button + owner engagement stats (z-30) ─────── */}
+        <div className="absolute inset-x-0 bottom-0 z-30 flex items-center px-4 py-4">
+          {isOwnStory ? (
+            <>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setShowViewers(true) }}
+                className="flex items-center gap-1 rounded-full px-2 py-1 text-xs text-white/60 transition-colors hover:bg-white/10 hover:text-white/90"
+              >
+                👁 {viewCount} {viewCount === 1 ? 'visualização' : 'visualizações'}
+              </button>
+              <span className="pointer-events-none ml-3 text-xs text-white/60">
+                ❤️ {likeCount} {likeCount === 1 ? 'curtida' : 'curtidas'}
+              </span>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); void handleLike() }}
+              disabled={likePending}
+              aria-label={liked ? 'Descurtir história' : 'Curtir história'}
+              className="ml-auto flex items-center gap-1.5 rounded-full px-2 py-1 transition-colors hover:bg-white/10"
+            >
+              <HeartIcon
+                filled={liked}
+                className={`h-6 w-6 transition-transform duration-150 ${likeBounce ? 'scale-125' : 'scale-100'}`}
+              />
+              {likeCount > 0 && (
+                <span className="min-w-[1rem] text-xs font-semibold text-white tabular-nums">
+                  {likeCount}
+                </span>
+              )}
+            </button>
+          )}
+        </div>
+
       </div>
 
       {/* Black bars on either side on wide screens */}
       <div className="pointer-events-none absolute inset-y-0 left-0 right-0 -z-10 bg-black" />
+
+      {showViewers && story && (
+        <StoryViewersModal storyId={story.id} onClose={() => setShowViewers(false)} />
+      )}
     </div>,
     document.body,
   )
 }
 
 // ── Icons ──────────────────────────────────────────────────────────────────
+
+function HeartIcon({ filled, className }: { filled: boolean; className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill={filled ? '#D4537E' : 'none'}
+      stroke={filled ? '#D4537E' : 'white'}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+  )
+}
 
 function XIcon({ className }: { className?: string }) {
   return (
