@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { postOfficialMessage } from '@/app/(app)/jogar/admin/actions'
 
 type TrackResult = {
   title:        string
@@ -25,6 +26,11 @@ export default function AdminClient() {
   const [wordInput,  setWordInput]  = useState('')
   const [wordMsg,    setWordMsg]    = useState('')
   const [wordSaving, setWordSaving] = useState(false)
+
+  // Official post form
+  const [officialContent, setOfficialContent] = useState('')
+  const [officialMsg,     setOfficialMsg]     = useState('')
+  const [officialPosting, setOfficialPosting] = useState(false)
 
   async function fetchTrack() {
     if (!spotifyUrl.trim()) return
@@ -62,6 +68,20 @@ export default function AdminClient() {
       setTrackResult(null)
       setSpotifyUrl('')
     }
+  }
+
+  async function handleOfficialPost() {
+    if (!officialContent.trim()) return
+    setOfficialPosting(true)
+    setOfficialMsg('')
+    const result = await postOfficialMessage(officialContent)
+    if (result.error) {
+      setOfficialMsg(`Erro: ${result.error}`)
+    } else {
+      setOfficialMsg('✓ Post publicado no feed!')
+      setOfficialContent('')
+    }
+    setOfficialPosting(false)
   }
 
   async function saveWord() {
@@ -183,6 +203,41 @@ export default function AdminClient() {
         {wordMsg && (
           <p className={`mt-2 text-xs ${wordMsg.startsWith('✓') ? 'text-[#1D9E75]' : 'text-red-400'}`}>
             {wordMsg}
+          </p>
+        )}
+      </div>
+
+      {/* OFFICIAL POST SECTION */}
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+        <h2 className="mb-1 text-sm font-semibold text-zinc-100">📣 Criar Post Oficial</h2>
+        <p className="mb-4 text-xs text-zinc-500">
+          Publica um post no feed como a conta{' '}
+          <span className="font-medium text-zinc-300">@incelicasappoficial</span>.
+          Use para anunciar updates, bugs corrigidos ou novidades.
+        </p>
+
+        <textarea
+          value={officialContent}
+          onChange={e => setOfficialContent(e.target.value.slice(0, 500))}
+          rows={5}
+          placeholder={'🆕 Nova atualização!\n\n• Feature A\n• Feature B\n\n#incelicas #update'}
+          className="w-full resize-none rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 outline-none focus:border-[#D4537E]"
+        />
+
+        <div className="mt-2 flex items-center justify-between">
+          <span className="text-xs text-zinc-600">{officialContent.length}/500</span>
+          <button
+            onClick={() => void handleOfficialPost()}
+            disabled={officialPosting || !officialContent.trim()}
+            className="rounded-xl bg-[#D4537E] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#c0456e] disabled:opacity-40"
+          >
+            {officialPosting ? 'Publicando…' : 'Publicar no feed'}
+          </button>
+        </div>
+
+        {officialMsg && (
+          <p className={`mt-2 text-xs ${officialMsg.startsWith('✓') ? 'text-[#1D9E75]' : 'text-red-400'}`}>
+            {officialMsg}
           </p>
         )}
       </div>

@@ -1,10 +1,7 @@
 import Link from 'next/link'
+import { CURRENT_STATUS, KNOWN_BUGS, type SystemStatus } from '@/lib/knownBugs'
 
-// ← Change this value to update the status badge site-wide
-const CURRENT_STATUS = 'operational' as const
-type Status = 'operational' | 'maintenance' | 'degraded'
-
-const STATUS_CONFIG: Record<Status, {
+const STATUS_CONFIG: Record<SystemStatus, {
   label:  string
   bg:     string
   border: string
@@ -33,13 +30,6 @@ const STATUS_CONFIG: Record<Status, {
     dot:    'bg-red-400',
   },
 }
-
-const KNOWN_BUGS = [
-  'Upload de vídeo pode falhar em conexões lentas — se o post não aparecer, tente de novo.',
-  'Câmera frontal no iOS pode abrir invertida ao usar "Tirar foto" no compositor.',
-  'O player do Spotify pode não carregar com bloqueadores de anúncios ativos.',
-  'Notificações em tempo real podem levar alguns segundos para aparecer após a ação.',
-]
 
 export default function StatusPage() {
   const s = STATUS_CONFIG[CURRENT_STATUS]

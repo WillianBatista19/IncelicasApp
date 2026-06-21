@@ -23,6 +23,10 @@ NEXT_PUBLIC_SUPABASE_URL=
 
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 
+SUPABASE_SERVICE_ROLE_KEY=
+
+INTERNAL_API_SECRET=
+
 ## Project Structure
 src/
 
@@ -89,6 +93,60 @@ All notification strings use Incelicas slang:
 - Notification triggers fire on: vibe, comment, follow, mention, repost
 
 ## Changelog and Status Pages
-Every time a new feature is implemented or a bug is fixed, update the /changelog page (`src/app/changelog/page.tsx`) by adding or updating the relevant version entry with the date and a description of what changed. Also update the /status page (`src/app/status/page.tsx`) if there are any known bugs to add or remove. This must be done automatically after every feature implementation — do not wait to be asked.
+Changelog and status data live in data files — edit THESE, not the page files directly:
+- Changelog entries → `src/lib/changelog.ts` (CHANGELOG_ENTRIES array, newest version first)
+- Known bugs → `src/lib/knownBugs.ts` (KNOWN_BUGS array + CURRENT_STATUS)
 
-Every time a bug is fixed, it must be added to the /changelog page under the current version entry with a "🐛 Corrigido:" prefix. Also update the /status page to remove it from the known bugs list if it was listed there. This applies to ALL bug fixes, even small ones.
+The pages (`src/app/changelog/page.tsx` and `src/app/status/page.tsx`) import and render from these files automatically.
+
+Rules:
+- Every new feature or bug fix → add/update the current version entry in `changelog.ts`
+- Bug fixed → "🐛 Corrigido:" prefix in changelog.ts; remove from knownBugs.ts if listed
+- New known bug → add to knownBugs.ts; add a "🐛 Bug identificado" entry to changelog.ts
+- This must happen automatically after every feature/fix — do not wait to be asked
+
+## Official Post System
+After updating `changelog.ts` or `knownBugs.ts`, ALWAYS create an official post announcing the change. Two ways:
+
+### Option A — Admin UI (manual, always works)
+Go to `/jogar/admin` → "📣 Criar Post Oficial" section → write message → Publicar.
+
+### Option B — API call (programmatic, requires dev server + env vars)
+```bash
+curl -X POST http://localhost:3000/api/internal/post \
+  -H "Authorization: Bearer $INTERNAL_API_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"content": "YOUR MESSAGE HERE"}'
+```
+
+### Post format templates
+
+**New feature / changelog update:**
+```
+🆕 Nova atualização!
+
+• [feature 1]
+• [feature 2]
+
+#incelicas #update
+```
+
+**Bug fixed:**
+```
+🐛 Bug corrigido!
+
+[description of what was fixed]
+
+#incelicas #bugfix
+```
+
+**New known bug identified:**
+```
+⚠️ Bug identificado e sendo investigado:
+
+[bug description]
+
+Já estamos trabalhando na correção! #incelicas
+```
+
+The `createOfficialPost(content)` utility is at `src/lib/officialPost.ts`. It uses the Supabase service role key to post as @incelicasappoficial without requiring that account's session. Requires SUPABASE_SERVICE_ROLE_KEY in `.env.local`.

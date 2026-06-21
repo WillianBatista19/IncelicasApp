@@ -1,9 +1,9 @@
 {
-  "/api/steam/route": "app/api/steam/route.js",
   "/status/page": "app/status/page.js",
+  "/api/steam/route": "app/api/steam/route.js",
   "/api/lastfm/route": "app/api/lastfm/route.js",
-  "/(app)/feed/page": "app/(app)/feed/page.js",
-  "/(app)/jogar/page": "app/(app)/jogar/page.js",
   "/(app)/profile/[username]/page": "app/(app)/profile/[username]/page.js",
+  "/(app)/jogar/page": "app/(app)/jogar/page.js",
+  "/(app)/feed/page": "app/(app)/feed/page.js",
   "/(app)/profile/edit/page": "app/(app)/profile/edit/page.js"
 }
