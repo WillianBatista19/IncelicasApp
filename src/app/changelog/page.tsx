@@ -2,6 +2,25 @@ import Link from 'next/link'
 
 const ENTRIES = [
   {
+    version: 'v0.12',
+    date:    'Jun 2026',
+    title:   'Jogar — Termo das Incelicas e Adivinhe a Música',
+    items: [
+      'Página /jogar com dois desafios diários: Termo das Incelicas (Wordle) e Adivinhe a Música',
+      'Termo das Incelicas: adivinhe a palavra de 5 letras em até 6 tentativas com feedback de letras corretas, presentes e ausentes',
+      'Adivinhe a Música: ouça trechos crescentes (1s → 2s → 4s → 8s → 16s → 30s) e tente acertar o nome da música',
+      'Sistema de pontuação: 600 pts na 1ª tentativa, decrescendo até 100 na 6ª',
+      'Ranking geral com abas Geral, Música e Termo — top 10 + posição do usuário',
+      'Card de desafios diários no feed com link para /jogar',
+      'Ícone 🎮 Jogar adicionado na sidebar e no nav mobile',
+      'Página /jogar/admin para a conta oficial adicionar músicas via URL do Spotify e palavras avulsas',
+      'API proxy server-side /api/spotify para buscar detalhes da faixa sem expor credenciais',
+      '🐛 Corrigido: algoritmo de cores do Termo reescrito com dois passos explícitos e array remaining[] para garantir que letras duplicadas sejam coloridas corretamente (ex: "CARRO" — Rs extras viram cinza, não amarelo)',
+      '🐛 Corrigido: estado vazio do Adivinhe a Música agora exibe mensagem orientando o admin a adicionar músicas em /jogar/admin',
+      '🐛 Corrigido: erros de RPC (get_daily_word, get_daily_song) agora são logados no console com código e mensagem para facilitar diagnóstico de permissões',
+    ],
+  },
+  {
     version: 'v0.11',
     date:    'Jun 2026',
     title:   'Navegação de notificações e página de post',

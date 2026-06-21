@@ -44,6 +44,7 @@ export default function LeftSidebar() {
     { href: '/feed',          label: 'Feed',          icon: HomeIcon,    badge: 0 },
     { href: '/explore',       label: 'Explorar',      icon: CompassIcon, badge: 0 },
     { href: '/notifications', label: 'Notificações',  icon: BellIcon,    badge: unread },
+    { href: '/jogar',         label: 'Jogar',         icon: GameIcon,    badge: 0 },
     { href: profileHref,      label: 'Perfil',        icon: UserIcon,    badge: 0 },
   ]
 
@@ -141,6 +142,17 @@ function UserIcon({ className }: { className?: string }) {
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
       <circle cx="12" cy="7" r="4" />
+    </svg>
+  )
+}
+
+function GameIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="2" y="6" width="20" height="12" rx="3" />
+      <path d="M6 12h4M8 10v4" />
+      <circle cx="16" cy="11" r="1" fill="currentColor" stroke="none" />
+      <circle cx="18" cy="13" r="1" fill="currentColor" stroke="none" />
     </svg>
   )
 }

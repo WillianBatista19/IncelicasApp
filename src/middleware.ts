@@ -32,7 +32,8 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Rule 1 — not logged in, trying to reach a protected route → /login
-  if (!user && pathname.startsWith('/feed')) {
+  // /jogar is public; /jogar/admin requires login (page also checks admin username)
+  if (!user && (pathname.startsWith('/feed') || pathname.startsWith('/jogar/admin'))) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     const redirect = NextResponse.redirect(url)

@@ -1,7 +1,12 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
   "/changelog/page": "app/changelog/page.js",
-  "/(app)/feed/page": "app/(app)/feed/page.js",
-  "/(app)/post/[id]/page": "app/(app)/post/[id]/page.js",
+  "/icon.svg/route": "app/icon.svg/route.js",
+  "/api/lastfm/route": "app/api/lastfm/route.js",
+  "/api/deezer/route": "app/api/deezer/route.js",
   "/(app)/profile/[username]/page": "app/(app)/profile/[username]/page.js",
+  "/(app)/jogar/page": "app/(app)/jogar/page.js",
+  "/(app)/feed/page": "app/(app)/feed/page.js",
+  "/(app)/jogar/admin/page": "app/(app)/jogar/admin/page.js",
   "/(app)/notifications/page": "app/(app)/notifications/page.js"
 }
