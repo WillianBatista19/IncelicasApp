@@ -1,7 +1,42 @@
 import Link from 'next/link'
-import { CHANGELOG_ENTRIES, COMING_SOON } from '@/lib/changelog'
+import { createClient } from '@supabase/supabase-js'
+import { COMING_SOON } from '@/lib/changelog'
 
-export default function ChangelogPage() {
+const MONTHS_PT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+
+function formatDate(d: string): string {
+  const [year, month] = d.split('-').map(Number)
+  return `${MONTHS_PT[month - 1]} ${year}`
+}
+
+type ChangelogEntry = {
+  id:         string
+  version:    string
+  title:      string
+  items:      string[]
+  entry_date: string
+}
+
+async function getEntries(): Promise<ChangelogEntry[]> {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  )
+  const { data, error } = await supabase
+    .from('changelog_entries')
+    .select('id, version, title, items, entry_date')
+    .order('entry_date', { ascending: false })
+
+  if (error) {
+    console.error('[changelog] fetch error:', error.message)
+    return []
+  }
+  return (data ?? []) as ChangelogEntry[]
+}
+
+export default async function ChangelogPage() {
+  const entries = await getEntries()
+
   return (
     <div className="min-h-screen bg-zinc-950 px-4 py-10">
       <div className="mx-auto max-w-lg">
@@ -25,8 +60,10 @@ export default function ChangelogPage() {
           <div className="absolute left-3 top-2 bottom-0 w-px bg-zinc-800" aria-hidden />
 
           <div className="space-y-0">
-            {CHANGELOG_ENTRIES.map((entry, i) => (
-              <div key={entry.version} className="relative pb-6 pl-10">
+            {entries.length === 0 ? (
+              <p className="pl-10 text-sm text-zinc-600">Nenhuma entrada ainda.</p>
+            ) : entries.map((entry, i) => (
+              <div key={entry.id} className="relative pb-6 pl-10">
                 {/* Dot */}
                 <div className={[
                   'absolute left-0 flex h-7 w-7 items-center justify-center rounded-full border',
@@ -51,7 +88,7 @@ export default function ChangelogPage() {
                     ].join(' ')}>
                       {entry.version}
                     </span>
-                    <span className="text-xs text-zinc-600">{entry.date}</span>
+                    <span className="text-xs text-zinc-600">{formatDate(entry.entry_date)}</span>
                   </div>
                   <h2 className="mb-2.5 text-sm font-semibold text-zinc-100">{entry.title}</h2>
                   <ul className="space-y-1.5">

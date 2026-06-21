@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { postOfficialMessage } from '@/app/(app)/jogar/admin/actions'
+import { postOfficialMessage, submitChangelogEntry } from '@/app/(app)/jogar/admin/actions'
 
 type TrackResult = {
   title:        string
@@ -26,6 +26,14 @@ export default function AdminClient() {
   const [wordInput,  setWordInput]  = useState('')
   const [wordMsg,    setWordMsg]    = useState('')
   const [wordSaving, setWordSaving] = useState(false)
+
+  // Changelog form
+  const [clVersion, setClVersion] = useState('')
+  const [clTitle,   setClTitle]   = useState('')
+  const [clItems,   setClItems]   = useState('')
+  const [clDate,    setClDate]    = useState(() => new Date().toISOString().split('T')[0])
+  const [clMsg,     setClMsg]     = useState('')
+  const [clSaving,  setClSaving]  = useState(false)
 
   // Official post form
   const [officialContent, setOfficialContent] = useState('')
@@ -68,6 +76,26 @@ export default function AdminClient() {
       setTrackResult(null)
       setSpotifyUrl('')
     }
+  }
+
+  async function handleChangelogSubmit() {
+    const items = clItems.split('\n').map(s => s.trim()).filter(Boolean)
+    if (!clVersion.trim() || !clTitle.trim() || items.length === 0) {
+      setClMsg('Preencha a versão, o título e pelo menos um item.')
+      return
+    }
+    setClSaving(true)
+    setClMsg('')
+    const result = await submitChangelogEntry(clVersion.trim(), clTitle.trim(), items, clDate)
+    if (result.error) {
+      setClMsg(`Erro: ${result.error}`)
+    } else {
+      setClMsg('✓ Entrada salva e post publicado no feed!')
+      setClVersion('')
+      setClTitle('')
+      setClItems('')
+    }
+    setClSaving(false)
   }
 
   async function handleOfficialPost() {
@@ -203,6 +231,64 @@ export default function AdminClient() {
         {wordMsg && (
           <p className={`mt-2 text-xs ${wordMsg.startsWith('✓') ? 'text-[#1D9E75]' : 'text-red-400'}`}>
             {wordMsg}
+          </p>
+        )}
+      </div>
+
+      {/* CHANGELOG SECTION */}
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+        <h2 className="mb-1 text-sm font-semibold text-zinc-100">📋 Novo Changelog</h2>
+        <p className="mb-4 text-xs text-zinc-500">
+          Salva a entrada no banco e publica um post oficial automaticamente.
+        </p>
+
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={clVersion}
+              onChange={e => setClVersion(e.target.value)}
+              placeholder="v0.14"
+              className="w-28 rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2 font-mono text-sm text-zinc-100 placeholder-zinc-600 outline-none focus:border-[#7F77DD]"
+            />
+            <input
+              type="date"
+              value={clDate}
+              onChange={e => setClDate(e.target.value)}
+              className="rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-[#7F77DD]"
+            />
+          </div>
+
+          <input
+            type="text"
+            value={clTitle}
+            onChange={e => setClTitle(e.target.value)}
+            placeholder="Título da versão (ex: Integração com Goodreads)"
+            className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 outline-none focus:border-[#7F77DD]"
+          />
+
+          <textarea
+            value={clItems}
+            onChange={e => setClItems(e.target.value)}
+            rows={5}
+            placeholder={'Um item por linha:\nAdicionado widget do Goodreads\n🐛 Corrigido: cover images não apareciam'}
+            className="w-full resize-none rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 outline-none focus:border-[#7F77DD]"
+          />
+        </div>
+
+        <div className="mt-3 flex justify-end">
+          <button
+            onClick={() => void handleChangelogSubmit()}
+            disabled={clSaving || !clVersion.trim() || !clTitle.trim() || !clItems.trim()}
+            className="rounded-xl bg-[#7F77DD] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#6d65cb] disabled:opacity-40"
+          >
+            {clSaving ? 'Salvando…' : 'Salvar e publicar'}
+          </button>
+        </div>
+
+        {clMsg && (
+          <p className={`mt-2 text-xs ${clMsg.startsWith('✓') ? 'text-[#1D9E75]' : 'text-red-400'}`}>
+            {clMsg}
           </p>
         )}
       </div>
