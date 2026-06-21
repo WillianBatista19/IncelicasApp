@@ -17,6 +17,38 @@ function parseJsonField<T>(raw: unknown): T | null {
   return raw as T
 }
 
+type GoodreadsData = {
+  cover_url: string | null
+  title:     string | null
+  author:    string | null
+  rating:    number | null
+}
+
+function parseGoodreadsWidget(html: string): GoodreadsData {
+  const empty: GoodreadsData = { cover_url: null, title: null, author: null, rating: null }
+  if (typeof window === 'undefined' || !html.trim()) return empty
+
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+
+  // Split book links into ones wrapping an image (cover) vs. text-only (title)
+  const bookLinks = Array.from(doc.querySelectorAll('a[href*="/book/show/"]'))
+  const coverLink = bookLinks.find(a => a.querySelector('img') !== null)
+  const titleLink = bookLinks.find(a => !a.querySelector('img') && a.textContent?.trim())
+
+  const cover_url = coverLink?.querySelector('img')?.getAttribute('src') ?? null
+  const title     = titleLink?.textContent?.trim() ?? null
+
+  const authorLink = doc.querySelector('a[href*="/author/show/"]')
+  const author     = authorLink?.textContent?.trim() ?? null
+
+  const bodyText   = doc.body.textContent ?? ''
+  const ratingMatch = bodyText.match(/[Mm]y\s+rating[:\s]+(\d)\s+of\s+5/)
+  const ratingNum  = ratingMatch ? parseInt(ratingMatch[1], 10) : null
+  const rating     = ratingNum !== null ? Math.min(5, Math.max(1, ratingNum)) : null
+
+  return { cover_url, title, author, rating }
+}
+
 export default function EditProfileForm({ profile }: { profile: Profile }) {
   const [displayName,        setDisplayName]        = useState(profile.display_name ?? '')
   const [username,           setUsername]           = useState(profile.username ?? '')
@@ -38,6 +70,11 @@ export default function EditProfileForm({ profile }: { profile: Profile }) {
   const [animeCoverUrl,      setAnimeCoverUrl]      = useState<string | null>(profile.anime_cover_url ?? null)
   const [showAnimeSearch,    setShowAnimeSearch]    = useState(false)
   const [steamId,            setSteamId]            = useState(profile.steam_id ?? '')
+  const [goodreadsHtml,   setGoodreadsHtml]   = useState('')
+  const [goodreadsTitle,  setGoodreadsTitle]  = useState<string | null>(profile.goodreads_book_title  ?? null)
+  const [goodreadsAuthor, setGoodreadsAuthor] = useState<string | null>(profile.goodreads_book_author ?? null)
+  const [goodreadsCover,  setGoodreadsCover]  = useState<string | null>(profile.goodreads_cover_url   ?? null)
+  const [goodreadsRating, setGoodreadsRating] = useState<number | null>(profile.goodreads_rating      ?? null)
 
   const fileRef  = useRef<HTMLInputElement>(null)
   const supabase = useMemo(() => createClient(), [])
@@ -69,6 +106,18 @@ export default function EditProfileForm({ profile }: { profile: Profile }) {
     setAnimeTitle(r.title)
     setAnimeCoverUrl(r.coverUrl)
     setShowAnimeSearch(false)
+  }
+
+  function handleGoodreadsHtmlChange(html: string) {
+    setGoodreadsHtml(html)
+    if (!html.trim()) return
+    const parsed = parseGoodreadsWidget(html)
+    if (parsed.title) {
+      setGoodreadsTitle(parsed.title)
+      setGoodreadsAuthor(parsed.author)
+      setGoodreadsCover(parsed.cover_url)
+      setGoodreadsRating(parsed.rating)
+    }
   }
 
   function handleUsernameChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -130,6 +179,10 @@ export default function EditProfileForm({ profile }: { profile: Profile }) {
         anime_title:     animeTitle     || null,
         anime_cover_url: animeCoverUrl  || null,
         steam_id:        steamId.trim() || null,
+        goodreads_book_title:  goodreadsTitle  || null,
+        goodreads_book_author: goodreadsAuthor || null,
+        goodreads_cover_url:   goodreadsCover  || null,
+        goodreads_rating:      goodreadsRating ?? null,
       })
       .eq('id', profile.id)
 
@@ -381,6 +434,56 @@ export default function EditProfileForm({ profile }: { profile: Profile }) {
                 <BookIcon className="h-4 w-4" />
                 Buscar livro
               </button>
+            )}
+          </FormField>
+
+          <FormField label="Goodreads">
+            {/* Preview of current saved data */}
+            {goodreadsTitle && (
+              <div className="mb-3 flex items-center gap-3 rounded-xl border border-zinc-700 bg-zinc-800/50 p-3">
+                {goodreadsCover && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={goodreadsCover} alt="" className="h-14 w-10 flex-shrink-0 rounded-lg object-cover" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-zinc-100">{goodreadsTitle}</p>
+                  {goodreadsAuthor && <p className="text-xs text-zinc-500">{goodreadsAuthor}</p>}
+                  {goodreadsRating !== null && (
+                    <div className="mt-0.5 flex gap-0.5">
+                      {Array.from({ length: 5 }, (_, i) => (
+                        <span key={i} className={`text-xs ${i < goodreadsRating ? 'text-[#D4537E]' : 'text-zinc-700'}`}>★</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setGoodreadsTitle(null); setGoodreadsAuthor(null); setGoodreadsCover(null); setGoodreadsRating(null); setGoodreadsHtml('') }}
+                  className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-red-400 transition-colors hover:border-red-800/60"
+                >
+                  Remover
+                </button>
+              </div>
+            )}
+            <textarea
+              value={goodreadsHtml}
+              onChange={e => handleGoodreadsHtmlChange(e.target.value)}
+              rows={4}
+              placeholder={'Cole o código do widget do Goodreads aqui...'}
+              className="w-full resize-none rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2 font-mono text-xs text-zinc-400 placeholder-zinc-600 outline-none focus:border-[#1D9E75]"
+            />
+            <p className="mt-1 text-xs text-zinc-600">
+              Acesse goodreads.com → seu perfil → widget de livros → copie o código HTML e cole aqui.
+            </p>
+            {goodreadsHtml.trim() !== '' && !goodreadsTitle && (
+              <p className="mt-1 text-xs text-amber-500">
+                Não foi possível extrair informações do widget. Verifique se o código está correto.
+              </p>
+            )}
+            {goodreadsHtml.trim() !== '' && goodreadsTitle && (
+              <p className="mt-1 text-xs text-[#1D9E75]">
+                ✓ Livro extraído: &quot;{goodreadsTitle}&quot;
+              </p>
             )}
           </FormField>
 

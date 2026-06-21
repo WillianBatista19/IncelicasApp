@@ -10,6 +10,17 @@ export interface ChangelogEntry {
 // See CLAUDE.md for the exact format and curl command.
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    version: 'v0.13',
+    date:    'Jun 2026',
+    title:   'Goodreads — lendo no perfil',
+    items: [
+      'Integração com Goodreads via widget HTML: cole o código do widget no perfil e o livro aparece automaticamente',
+      'Card "Lendo no Goodreads 📚" no perfil com capa do livro, título, autor e avaliação em estrelas',
+      'Avaliação em estrelas ★★★☆☆ exibida em rosa com link "ver no Goodreads"',
+      'Parser client-side extrai capa, título, autor e nota direto do HTML do widget sem precisar de API key',
+    ],
+  },
+  {
     version: 'v0.12',
     date:    'Jun 2026',
     title:   'Jogar — Termo das Incelicas e Adivinhe a Música',

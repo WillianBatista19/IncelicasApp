@@ -10,6 +10,9 @@ const nextConfig = {
       { protocol: 'https', hostname: '*.anilist.co' },
       { protocol: 'https', hostname: 'cdn.cloudflare.steamstatic.com' },
       { protocol: 'https', hostname: 'media.steampowered.com' },
+      { protocol: 'https', hostname: 'i.gr-assets.com' },
+      { protocol: 'https', hostname: 'images.gr-assets.com' },
+      { protocol: 'https', hostname: 's.gr-assets.com' },
     ],
   },
 }

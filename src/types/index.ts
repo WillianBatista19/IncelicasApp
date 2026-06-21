@@ -37,6 +37,10 @@ export interface Profile {
   anime_title:     string | null
   anime_cover_url: string | null
   steam_id:        string | null
+  goodreads_book_title:  string | null
+  goodreads_book_author: string | null
+  goodreads_cover_url:   string | null
+  goodreads_rating:      number | null
 }
 
 export interface Vibe {

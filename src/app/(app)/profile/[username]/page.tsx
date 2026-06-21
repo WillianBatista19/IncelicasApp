@@ -5,6 +5,7 @@ import PostGrid from '@/components/profile/PostGrid'
 import LastfmWidget from '@/components/profile/LastfmWidget'
 import MediaNowWidgets from '@/components/profile/MediaNowWidgets'
 import SteamWidget from '@/components/profile/SteamWidget'
+import GoodreadsWidget from '@/components/profile/GoodreadsWidget'
 import type { WatchingNow, ReadingNow } from '@/types'
 
 type Props = {
@@ -20,7 +21,7 @@ export default async function ProfilePage({ params }: Props) {
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id, username, display_name, avatar_url, bio, created_at, lastfm_username, watching_now, reading_now, anime_title, anime_cover_url, steam_id')
+    .select('id, username, display_name, avatar_url, bio, created_at, lastfm_username, watching_now, reading_now, anime_title, anime_cover_url, steam_id, goodreads_book_title, goodreads_book_author, goodreads_cover_url, goodreads_rating')
     .eq('username', username)
     .single()
 
@@ -80,6 +81,14 @@ export default async function ProfilePage({ params }: Props) {
         animeTitle={profile.anime_title    as string | null}
         animeCoverUrl={profile.anime_cover_url as string | null}
       />
+      {profile.goodreads_book_title && (
+        <GoodreadsWidget
+          title={profile.goodreads_book_title  as string}
+          author={profile.goodreads_book_author as string | null}
+          coverUrl={profile.goodreads_cover_url  as string | null}
+          rating={profile.goodreads_rating       as number | null}
+        />
+      )}
       {profile.steam_id && (
         <SteamWidget steamId={profile.steam_id} />
       )}
