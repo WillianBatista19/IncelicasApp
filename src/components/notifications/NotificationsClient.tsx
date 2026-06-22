@@ -8,9 +8,10 @@ import type { NotificationRow } from '@/types'
 type Props = {
   initialNotifications: NotificationRow[]
   userId:               string
+  currentUsername:      string
 }
 
-export default function NotificationsClient({ initialNotifications, userId }: Props) {
+export default function NotificationsClient({ initialNotifications, userId, currentUsername }: Props) {
   const [notifications, setNotifications] = useState(initialNotifications)
   const [marking,       setMarking]       = useState(false)
 
@@ -66,6 +67,7 @@ export default function NotificationsClient({ initialNotifications, userId }: Pr
             <NotificationItem
               key={n.id}
               notification={n}
+              currentUsername={currentUsername}
               onRead={id => setNotifications(prev => prev.map(p => p.id === id ? { ...p, read: true } : p))}
             />
           ))}

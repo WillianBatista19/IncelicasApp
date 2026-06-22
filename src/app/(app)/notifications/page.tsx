@@ -15,18 +15,26 @@ export default async function NotificationsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data } = await supabase
-    .from('notifications')
-    .select(NOTIF_SELECT)
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(100)
+  const [{ data }, { data: profileData }] = await Promise.all([
+    supabase
+      .from('notifications')
+      .select(NOTIF_SELECT)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(100),
+    supabase
+      .from('profiles')
+      .select('username')
+      .eq('id', user.id)
+      .single(),
+  ])
 
-  const notifications = (data as unknown as NotificationRow[] | null) ?? []
+  const notifications   = (data as unknown as NotificationRow[] | null) ?? []
+  const currentUsername = profileData?.username ?? ''
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-12">
-      <NotificationsClient initialNotifications={notifications} userId={user.id} />
+      <NotificationsClient initialNotifications={notifications} userId={user.id} currentUsername={currentUsername} />
     </div>
   )
 }

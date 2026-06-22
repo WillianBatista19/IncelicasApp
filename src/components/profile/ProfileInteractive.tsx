@@ -29,6 +29,7 @@ type Props = {
   postCount:            number
   initialFollowerCount: number
   followingCount:       number
+  openStory?:           boolean
 }
 
 export default function ProfileInteractive({
@@ -38,6 +39,7 @@ export default function ProfileInteractive({
   postCount,
   initialFollowerCount,
   followingCount,
+  openStory = false,
 }: Props) {
   const router = useRouter()
   const { signOut } = useUser()
@@ -70,6 +72,10 @@ export default function ProfileInteractive({
         }
       })
   }, [profile.id, profile.username, profile.display_name, profile.avatar_url])
+
+  useEffect(() => {
+    if (openStory && storyGroup) setViewerOpen(true)
+  }, [openStory, storyGroup])
 
   async function handleSignOut() {
     await signOut()

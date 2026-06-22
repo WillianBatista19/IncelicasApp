@@ -9,7 +9,8 @@ import { AccordionRoot, AccordionSection } from '@/components/profile/ProfileAcc
 import type { WatchingNow, ReadingNow } from '@/types'
 
 type Props = {
-  params: { username: string }
+  params:       { username: string }
+  searchParams: { openStory?: string }
 }
 
 function MediaCard({
@@ -81,7 +82,7 @@ function AnimeCard({ title, coverUrl }: { title: string; coverUrl: string | null
   )
 }
 
-export default async function ProfilePage({ params }: Props) {
+export default async function ProfilePage({ params, searchParams }: Props) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -149,6 +150,7 @@ export default async function ProfilePage({ params }: Props) {
         postCount={postCount}
         initialFollowerCount={followerCount}
         followingCount={followingCount}
+        openStory={searchParams.openStory === 'true'}
       />
 
       {hasAny && (

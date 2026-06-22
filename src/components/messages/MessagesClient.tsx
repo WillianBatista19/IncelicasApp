@@ -5,11 +5,9 @@ import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Avatar from '@/components/Avatar'
-import { markConversationRead, createMessageNotification, getOrCreateConversation } from '@/app/(app)/messages/actions'
+import { markConversationRead, createMessageNotification } from '@/app/(app)/messages/actions'
 import NewConversationModal from '@/components/messages/NewConversationModal'
 import type { ConversationMessage, ConversationSummary } from '@/types'
-
-const OFFICIAL_USERNAME = 'incelicasappoficial'
 
 type Props = {
   currentUserId:        string
@@ -45,24 +43,21 @@ export default function MessagesClient({
   const initId   = urlConvId ?? activeConversationId
   const initConv = initId ? (initialConversations.find(c => c.id === initId) ?? null) : null
 
-  const [conversations,   setConversations]   = useState<ConversationSummary[]>(initialConversations)
-  const [selectedConvId,  setSelectedConvId]  = useState<string | null>(initId)
-  // selectedConv is stored as explicit state (not derived via find()) to avoid the
-  // brief window where selectedConvId is set but conversations.find() still returns
-  // undefined (e.g. during partial re-renders or async list population).
-  const [selectedConv,    setSelectedConv]    = useState<ConversationSummary | null>(initConv)
-  const [messages,        setMessages]        = useState<ConversationMessage[]>(initialMessages)
-  const [input,           setInput]           = useState('')
-  const [sending,         setSending]         = useState(false)
-  const [showThread,      setShowThread]      = useState(!!initId)
-  const [showNewModal,    setShowNewModal]    = useState(false)
-  const [officialLoading, setOfficialLoading] = useState(false)
+  const [conversations,  setConversations]  = useState<ConversationSummary[]>(initialConversations)
+  const [selectedConvId, setSelectedConvId] = useState<string | null>(initId)
+  // selectedConv as explicit state so it's set atomically with selectedConvId,
+  // avoiding the brief window where conversations.find() would return undefined.
+  const [selectedConv,   setSelectedConv]   = useState<ConversationSummary | null>(initConv)
+  const [messages,       setMessages]       = useState<ConversationMessage[]>(initialMessages)
+  const [input,          setInput]          = useState('')
+  const [sending,        setSending]        = useState(false)
+  const [showThread,     setShowThread]     = useState(!!initId)
+  const [showNewModal,   setShowNewModal]   = useState(false)
 
-  const bottomRef   = useRef<HTMLDivElement>(null)
-  const inputRef    = useRef<HTMLTextAreaElement>(null)
-  const didAutoOpen = useRef(false)
+  const bottomRef = useRef<HTMLDivElement>(null)
+  const inputRef  = useRef<HTMLTextAreaElement>(null)
 
-  // Debug log — remove after confirming the thread renders correctly
+  // Debug log — remove after confirming thread renders correctly
   console.log(
     '[MessagesClient] selectedConvId:', selectedConvId,
     '| selectedConv:', selectedConv?.id ?? null,
@@ -71,7 +66,7 @@ export default function MessagesClient({
     '| showThread:', showThread,
   )
 
-  // Keep selectedConv in sync whenever the conversations list updates.
+  // Keep selectedConv in sync whenever conversations list updates.
   useEffect(() => {
     if (!selectedConvId) return
     const conv = conversations.find(c => c.id === selectedConvId)
@@ -89,8 +84,8 @@ export default function MessagesClient({
     setMessages([])
   }, [urlConvId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // If the active conversation isn't in the list yet (freshly created or first ever),
-  // fetch it directly and prepend so the thread header can render right away.
+  // If the active conversation isn't in the list yet (freshly created), fetch it
+  // directly and prepend so the thread can render immediately.
   useEffect(() => {
     if (!selectedConvId) return
     if (conversations.some(c => c.id === selectedConvId)) return
@@ -138,7 +133,7 @@ export default function MessagesClient({
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Load messages when selected conversation changes
+  // Load messages when selected conversation changes and mark as read
   useEffect(() => {
     if (!selectedConvId) return
 
@@ -152,6 +147,7 @@ export default function MessagesClient({
       })
 
     void markConversationRead(selectedConvId)
+    window.dispatchEvent(new CustomEvent('messages:read'))
 
     setConversations(prev =>
       prev.map(c => c.id === selectedConvId ? { ...c, lastReadAt: new Date().toISOString() } : c),
@@ -171,7 +167,12 @@ export default function MessagesClient({
           const newMsg = payload.new as ConversationMessage
           setMessages(prev => prev.some(m => m.id === newMsg.id) ? prev : [...prev, newMsg])
           if (newMsg.sender_id !== currentUserId) {
+            // Mark as read immediately — thread is open and visible
             void markConversationRead(selectedConvId)
+            window.dispatchEvent(new CustomEvent('messages:read'))
+            setConversations(prev =>
+              prev.map(c => c.id === selectedConvId ? { ...c, lastReadAt: new Date().toISOString() } : c),
+            )
           }
         },
       )
@@ -217,42 +218,6 @@ export default function MessagesClient({
     router.push(`/messages/${convId}`)
   }
 
-  async function openOfficialChat() {
-    setOfficialLoading(true)
-    try {
-      const { data } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('username', OFFICIAL_USERNAME)
-        .single()
-      if (data?.id) {
-        const result = await getOrCreateConversation(data.id)
-        if ('conversationId' in result) {
-          router.push(`/messages/${result.conversationId}`)
-        }
-      }
-    } finally {
-      setOfficialLoading(false)
-    }
-  }
-
-  // Auto-open incelicasappoficial when landing on /messages with no selection.
-  // Runs once per mount. If the conv already exists in the list, select it;
-  // otherwise create it via openOfficialChat (which navigates to /messages/<id>).
-  useEffect(() => {
-    if (didAutoOpen.current) return
-    if (urlConvId) return       // already on /messages/<id>, no auto-open needed
-    if (selectedConvId) return  // already has a selection
-    didAutoOpen.current = true
-
-    const officialConv = conversations.find(c => c.otherUser.username === OFFICIAL_USERNAME)
-    if (officialConv) {
-      selectConversation(officialConv.id)
-    } else {
-      void openOfficialChat()
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
   const sendMessage = useCallback(async () => {
     if (!selectedConvId || !input.trim() || sending) return
     const content = input.trim()
@@ -294,7 +259,10 @@ export default function MessagesClient({
     }
   }
 
+  // Conversation is unread if the last message is from the other person and was
+  // sent after last_read_at — unless the thread is currently open (actively viewing).
   function isUnread(conv: ConversationSummary): boolean {
+    if (conv.id === selectedConvId && showThread) return false
     if (!conv.lastMessage) return false
     if (conv.lastMessage.sender_id === currentUserId) return false
     if (!conv.lastReadAt) return true
@@ -322,32 +290,11 @@ export default function MessagesClient({
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
             </svg>
-            Nova
+            Nova mensagem
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {/* Pinned official chat shortcut */}
-          <button
-            type="button"
-            disabled={officialLoading}
-            onClick={() => void openOfficialChat()}
-            className="flex w-full items-center gap-3 border-b border-zinc-800/60 px-4 py-2.5 text-left transition-colors hover:bg-zinc-900 disabled:opacity-60"
-          >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#D4537E]/20 text-base">
-              💬
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-[#D4537E]">@{OFFICIAL_USERNAME}</p>
-              <p className="truncate text-xs text-zinc-500">Falar com a equipe</p>
-            </div>
-            {officialLoading && (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="h-4 w-4 shrink-0 animate-spin text-zinc-500" aria-hidden>
-                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-              </svg>
-            )}
-          </button>
-
           {conversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
               <span className="text-3xl">💬</span>

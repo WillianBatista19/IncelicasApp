@@ -12,27 +12,59 @@ type Viewer = {
 }
 
 type Props = {
-  storyId: string
-  onClose: () => void
+  storyId:      string
+  storyOwnerId: string
+  onClose:      () => void
 }
 
-export default function StoryViewersModal({ storyId, onClose }: Props) {
+export default function StoryViewersModal({ storyId, storyOwnerId, onClose }: Props) {
   const supabase              = useMemo(() => createClient(), [])
   const [viewers, setViewers] = useState<Viewer[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase
-      .from('story_views')
-      .select('profiles(display_name, username, avatar_url)')
-      .eq('story_id', storyId)
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        const rows = (data ?? []) as unknown as { profiles: Viewer | null }[]
-        setViewers(rows.map(r => r.profiles).filter((p): p is Viewer => p !== null))
+    async function load() {
+      // Step 1: get viewer user_ids ordered by most recent view.
+      // Avoids PostgREST FK-join so it works regardless of FK setup.
+      const { data: views, error: viewsErr } = await supabase
+        .from('story_views')
+        .select('user_id, created_at')
+        .eq('story_id', storyId)
+        .neq('user_id', storyOwnerId)
+        .order('created_at', { ascending: false })
+
+      if (viewsErr) {
+        console.error('[StoryViewersModal] views error:', viewsErr.message)
         setLoading(false)
-      })
-  }, [supabase, storyId])
+        return
+      }
+
+      if (!views || views.length === 0) {
+        setViewers([])
+        setLoading(false)
+        return
+      }
+
+      // Step 2: fetch profiles for those user_ids
+      const userIds = views.map(v => v.user_id as string)
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, display_name, username, avatar_url')
+        .in('id', userIds)
+
+      const profileMap = Object.fromEntries(
+        (profiles ?? []).map(p => [p.id as string, p as Viewer]),
+      )
+
+      // Preserve view order (most recent first)
+      setViewers(
+        userIds.map(id => profileMap[id]).filter((p): p is Viewer => Boolean(p)),
+      )
+      setLoading(false)
+    }
+
+    void load()
+  }, [supabase, storyId, storyOwnerId])
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }

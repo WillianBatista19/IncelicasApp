@@ -5,8 +5,10 @@ import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 import Avatar from '@/components/Avatar'
 import StoryViewersModal from '@/components/stories/StoryViewersModal'
+import StoryLikersModal from '@/components/stories/StoryLikersModal'
 import { relativeTime } from '@/lib/utils'
 import type { StoryGroup } from '@/types'
+import { createStoryLikeNotification } from '@/app/(app)/stories/actions'
 
 const DURATION_MS = 5000
 
@@ -40,7 +42,6 @@ export default function StoryViewer({
     }
   }, [])
 
-  // Local mutable copy of groups so deletions can update it without a round-trip
   const [groups,    setGroups]    = useState(initialGroups)
   const [groupIdx,  setGroupIdx]  = useState(() => Math.min(initialGroupIndex, initialGroups.length - 1))
   const [storyIdx,  setStoryIdx]  = useState(() => {
@@ -57,8 +58,8 @@ export default function StoryViewer({
   const [likePending,      setLikePending]      = useState(false)
   const [likeBounce,       setLikeBounce]       = useState(false)
   const [showViewers,      setShowViewers]      = useState(false)
+  const [showLikers,       setShowLikers]       = useState(false)
 
-  // Refs so stable callbacks always read the latest values
   const groupIdxRef = useRef(groupIdx)
   const storyIdxRef = useRef(storyIdx)
   const groupsRef   = useRef(groups)
@@ -79,10 +80,8 @@ export default function StoryViewer({
     if (!g) { onClose(); return }
 
     if (si < g.stories.length - 1) {
-      // Next story in same group
       setStoryIdx(si + 1)
     } else if (gi < gs.length - 1) {
-      // First story of next group
       setGroupIdx(gi + 1)
       setStoryIdx(0)
     } else {
@@ -98,12 +97,10 @@ export default function StoryViewer({
     if (si > 0) {
       setStoryIdx(si - 1)
     } else if (gi > 0) {
-      // Last story of previous group
       const prevGroup = gs[gi - 1]
       setGroupIdx(gi - 1)
       setStoryIdx(prevGroup.stories.length - 1)
     }
-    // At very first story: do nothing
   }, [])
 
   // ── Progress bar animation + auto-advance ──────────────────────────────────
@@ -126,11 +123,8 @@ export default function StoryViewer({
     async function saveView() {
       const { error } = await supabase
         .from('story_views')
-        .insert({ story_id: storyId, user_id: currentUserId })
-      // 23505 = unique_violation (already viewed) — expected, ignore silently
-      if (error && error.code !== '23505') {
-        console.error('[StoryViewer] failed to save view:', error)
-      }
+        .upsert({ story_id: storyId, user_id: currentUserId }, { onConflict: 'story_id,user_id', ignoreDuplicates: true })
+      if (error) console.error('[StoryViewer] failed to save view:', error)
     }
     void saveView()
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -148,12 +142,13 @@ export default function StoryViewer({
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose, goNext, goPrev, confirmingDelete])
 
-  // ── Fetch likes + view count whenever the displayed story changes ──────────
+  // ── Fetch likes + view count (exclude owner's own view) ───────────────────
 
   useEffect(() => {
     if (!story) return
     let live = true
-    const sid = story.id
+    const sid     = story.id
+    const ownerId = story.user_id
 
     setLiked(false)
     setLikeCount(0)
@@ -172,7 +167,8 @@ export default function StoryViewer({
       supabase
         .from('story_views')
         .select('user_id', { count: 'exact', head: true })
-        .eq('story_id', sid),
+        .eq('story_id', sid)
+        .neq('user_id', ownerId),  // exclude owner's own view
     ]).then(([myLike, allLikes, views]) => {
       if (!live) return
       setLiked((myLike.count ?? 0) > 0)
@@ -198,7 +194,6 @@ export default function StoryViewer({
       const newStories = group.stories.filter(s => s.id !== story.id)
 
       if (newStories.length === 0) {
-        // This group is now empty — remove it and navigate
         const newGroups = groups.filter((_, gi) => gi !== groupIdx)
         if (newGroups.length === 0) { onClose(); return }
         setGroups(newGroups)
@@ -206,7 +201,6 @@ export default function StoryViewer({
         setGroupIdx(nextGi)
         setStoryIdx(0)
       } else {
-        // Stay in this group, clamp storyIdx
         const newGroups = groups.map((g, gi) =>
           gi === groupIdx ? { ...g, stories: newStories } : g,
         )
@@ -243,7 +237,11 @@ export default function StoryViewer({
       const { error } = await supabase
         .from('story_likes')
         .insert({ story_id: story.id, user_id: currentUserId })
-      if (error && error.code !== '23505') { setLiked(wasLiked); setLikeCount(prevCount) }
+      if (error && error.code !== '23505') {
+        setLiked(wasLiked); setLikeCount(prevCount)
+      } else if (!error && story.user_id !== currentUserId) {
+        await createStoryLikeNotification(story.user_id, story.id)
+      }
     }
 
     setLikePending(false)
@@ -263,10 +261,8 @@ export default function StoryViewer({
       aria-modal
       aria-label={`História de ${name}`}
     >
-      {/* Story container — full screen on mobile, max 420px on desktop */}
       <div className="relative h-full w-full max-w-[420px] overflow-hidden">
 
-        {/* ── Story image ─────────────────────────────────────────── */}
         <img
           key={story.id}
           src={story.media_url}
@@ -275,13 +271,10 @@ export default function StoryViewer({
           draggable={false}
         />
 
-        {/* Top gradient for UI legibility */}
         <div className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-black/80 to-transparent" />
-
-        {/* Bottom gradient */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/50 to-transparent" />
 
-        {/* ── Progress bars — one per story in this group (z-30) ── */}
+        {/* ── Progress bars ─────────────────────────────────────────── */}
         <div key={`${groupIdx}-${storyIdx}`} className="absolute inset-x-0 top-0 z-30 flex gap-[3px] px-2 pt-2">
           {groupStories.map((_, i) => (
             <div key={i} className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/30">
@@ -299,7 +292,7 @@ export default function StoryViewer({
           ))}
         </div>
 
-        {/* ── Author info + close (z-30) ──────────────────────────── */}
+        {/* ── Author info + close ──────────────────────────────────── */}
         <div className="absolute inset-x-0 top-6 z-30 flex items-center gap-2 px-3 pt-1">
           <Avatar src={profile.avatar_url} name={name} size="sm" />
           <div className="min-w-0 flex-1">
@@ -307,7 +300,6 @@ export default function StoryViewer({
             <p className="text-[10px] text-white/60">{relativeTime(story.created_at)}</p>
           </div>
 
-          {/* Trash — only on own stories */}
           {isOwnStory && (
             <button
               type="button"
@@ -319,7 +311,6 @@ export default function StoryViewer({
             </button>
           )}
 
-          {/* Close */}
           <button
             type="button"
             onClick={onClose}
@@ -330,13 +321,13 @@ export default function StoryViewer({
           </button>
         </div>
 
-        {/* ── Tap zones: left = prev, right = next (z-20, below UI) ── */}
+        {/* ── Tap zones ─────────────────────────────────────────────── */}
         <div className="absolute inset-0 z-20 flex" aria-hidden>
           <div className="flex-1 cursor-pointer" onClick={goPrev} />
           <div className="flex-1 cursor-pointer" onClick={goNext} />
         </div>
 
-        {/* ── Inline delete confirmation (z-40, above tap zones) ── */}
+        {/* ── Delete confirmation ────────────────────────────────────── */}
         {confirmingDelete && (
           <div
             className="absolute inset-0 z-40 flex items-end justify-center pb-12"
@@ -366,10 +357,11 @@ export default function StoryViewer({
           </div>
         )}
 
-        {/* ── Like button + owner engagement stats (z-30) ─────── */}
+        {/* ── Engagement stats (z-30) ──────────────────────────────── */}
         <div className="absolute inset-x-0 bottom-0 z-30 flex items-center px-4 py-4">
           {isOwnStory ? (
             <>
+              {/* Views — clickable, opens viewers list */}
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); setShowViewers(true) }}
@@ -377,9 +369,21 @@ export default function StoryViewer({
               >
                 👁 {viewCount} {viewCount === 1 ? 'visualização' : 'visualizações'}
               </button>
-              <span className="pointer-events-none ml-3 text-xs text-white/60">
-                ❤️ {likeCount} {likeCount === 1 ? 'curtida' : 'curtidas'}
-              </span>
+
+              {/* Likes — clickable if count > 0, opens likers list */}
+              {likeCount > 0 ? (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setShowLikers(true) }}
+                  className="ml-3 flex items-center gap-1 rounded-full px-2 py-1 text-xs text-white/60 transition-colors hover:bg-white/10 hover:text-white/90"
+                >
+                  ❤️ {likeCount} {likeCount === 1 ? 'curtida' : 'curtidas'}
+                </button>
+              ) : (
+                <span className="pointer-events-none ml-3 text-xs text-white/60">
+                  ❤️ 0 curtidas
+                </span>
+              )}
             </>
           ) : (
             <button
@@ -404,11 +408,21 @@ export default function StoryViewer({
 
       </div>
 
-      {/* Black bars on either side on wide screens */}
       <div className="pointer-events-none absolute inset-y-0 left-0 right-0 -z-10 bg-black" />
 
       {showViewers && story && (
-        <StoryViewersModal storyId={story.id} onClose={() => setShowViewers(false)} />
+        <StoryViewersModal
+          storyId={story.id}
+          storyOwnerId={story.user_id}
+          onClose={() => setShowViewers(false)}
+        />
+      )}
+
+      {showLikers && story && (
+        <StoryLikersModal
+          storyId={story.id}
+          onClose={() => setShowLikers(false)}
+        />
       )}
     </div>,
     document.body,

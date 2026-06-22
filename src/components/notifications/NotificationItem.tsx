@@ -11,11 +11,12 @@ import { isVerified } from '@/lib/verified'
 import type { NotificationRow } from '@/types'
 
 type Props = {
-  notification: NotificationRow
-  onRead?:      (id: string) => void
+  notification:    NotificationRow
+  currentUsername: string
+  onRead?:         (id: string) => void
 }
 
-export default function NotificationItem({ notification, onRead }: Props) {
+export default function NotificationItem({ notification, currentUsername, onRead }: Props) {
   const { id, type, from_profile, post, comment, read, created_at, post_id, comment_id } = notification
 
   const actorName = from_profile.display_name || from_profile.username
@@ -36,7 +37,11 @@ export default function NotificationItem({ notification, onRead }: Props) {
       console.log('[NotificationItem] mark-read result:', error ? `ERROR: ${error.message}` : 'ok')
       onRead?.(id)
     }
-    router.push(href)
+    if (type === 'story_like' && currentUsername) {
+      router.push(`/profile/${currentUsername}?openStory=true`)
+    } else {
+      router.push(href)
+    }
   }
 
   return (

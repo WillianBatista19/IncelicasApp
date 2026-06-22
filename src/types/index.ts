@@ -10,6 +10,7 @@ export type NotificationType =
   | 'repost'
   | 'mention'
   | 'message'
+  | 'story_like'
 
 export interface WatchingNow {
   id:         number

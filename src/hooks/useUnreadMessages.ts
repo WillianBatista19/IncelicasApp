@@ -47,7 +47,12 @@ export function useUnreadMessages(userId: string | null): number {
     if (!userId) return
     void fetchCount()
     const interval = setInterval(() => void fetchCount(), 20000)
-    return () => clearInterval(interval)
+    // Re-fetch immediately when MessagesClient marks a conversation as read
+    window.addEventListener('messages:read', fetchCount)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('messages:read', fetchCount)
+    }
   }, [userId, fetchCount])
 
   return count

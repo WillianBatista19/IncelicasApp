@@ -66,6 +66,7 @@ export default function StoriesBar({ currentUserId }: Props) {
         // profiles from PostgREST may come back as an array for some FK directions
         const rawProfiles = s.profiles as unknown as StoryProfile | StoryProfile[]
         const user = Array.isArray(rawProfiles) ? rawProfiles[0] : rawProfiles
+        if (!user) continue  // skip if profile join failed (FK not yet pointing to profiles)
         if (!groupMap[s.user_id]) {
           groupMap[s.user_id] = { user, stories: [] }
         }

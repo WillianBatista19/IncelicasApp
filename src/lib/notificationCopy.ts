@@ -31,6 +31,8 @@ export function notificationText(
       return `${actorName} curtiu seu comentário`
     case 'message':
       return `${actorName} te mandou uma mensagem`
+    case 'story_like':
+      return `${actorName} curtiu seu story`
   }
 }
 
@@ -45,6 +47,7 @@ export function notificationEmoji(type: NotificationType): string {
     case 'comment_reply': return '↩️'
     case 'comment_like':  return '❤️'
     case 'message':       return '💬'
+    case 'story_like':    return '❤️'
   }
 }
 
@@ -68,6 +71,8 @@ export function notificationHref(
       return `/profile/${username}`
     case 'message':
       return '/messages'
+    case 'story_like':
+      return `/profile/${username}`
     default:
       // vibe, repost, mention
       return postId ? `/post/${postId}` : `/profile/${username}`
