@@ -71,10 +71,12 @@ export function notificationHref(
       return `/profile/${username}`
     case 'message':
       return '/messages'
+    case 'repost':
+      return postId ? `/post/${postId}` : `/profile/${username}`
     case 'story_like':
       return `/profile/${username}`
     default:
-      // vibe, repost, mention
+      // vibe, mention
       return postId ? `/post/${postId}` : `/profile/${username}`
   }
 }

@@ -276,7 +276,7 @@ begin
     (select user_id from posts where id = new.repost_of),
     new.user_id,
     'repost',
-    new.repost_of
+    new.id
   );
 
   return new;
