@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { getOrCreateConversation } from '@/app/(app)/messages/actions'
@@ -45,12 +45,25 @@ export default function ProfileInteractive({
 }: Props) {
   const router = useRouter()
   const { signOut } = useUser()
-  const [msgLoading, setMsgLoading] = useState(false)
-  const [followerCount, setFollowerCount] = useState(initialFollowerCount)
-  const [activeModal,   setActiveModal]   = useState<'followers' | 'following' | null>(null)
-  const [storyGroup,    setStoryGroup]    = useState<StoryGroup | null>(null)
-  const [viewerOpen,    setViewerOpen]    = useState(false)
-  const [viewedIds,     setViewedIds]     = useState<Set<string>>(new Set())
+  const [msgLoading,     setMsgLoading]     = useState(false)
+  const [followerCount,  setFollowerCount]  = useState(initialFollowerCount)
+  const [activeModal,    setActiveModal]    = useState<'followers' | 'following' | null>(null)
+  const [storyGroup,     setStoryGroup]     = useState<StoryGroup | null>(null)
+  const [viewerOpen,     setViewerOpen]     = useState(false)
+  const [viewedIds,      setViewedIds]      = useState<Set<string>>(new Set())
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const mobileMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return
+    function handleOutside(e: MouseEvent) {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) {
+        setMobileMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [mobileMenuOpen])
 
   useEffect(() => {
     const supabase = createClient()
@@ -114,28 +127,72 @@ export default function ProfileInteractive({
         )}
 
         {isOwnProfile ? (
-          <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
-            <Link
-              href="/profile/edit"
-              className="rounded-xl border border-zinc-600 px-3 py-2 text-sm font-medium text-zinc-300 transition-colors hover:border-zinc-400 hover:text-zinc-100"
-            >
-              Editar perfil
-            </Link>
-            <Link
-              href={`/profile/${profile.username}/saved`}
-              className="rounded-xl border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-400 transition-colors hover:border-zinc-500 hover:text-zinc-200"
-            >
-              🔖 Salvos
-            </Link>
-            <button
-              type="button"
-              onClick={handleSignOut}
-              aria-label="Sair"
-              className="xl:hidden rounded-xl border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-500 transition-colors hover:border-red-800 hover:bg-red-950/40 hover:text-red-400"
-            >
-              Sair
-            </button>
-          </div>
+          <>
+            {/* Mobile: three-dots dropdown (md:hidden) */}
+            <div className="relative md:hidden" ref={mobileMenuRef}>
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(v => !v)}
+                aria-label="Mais opções"
+                className="rounded-xl border border-zinc-700 p-2 text-zinc-400 transition-colors hover:border-zinc-500 hover:text-zinc-200"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  <circle cx="5" cy="12" r="1.5" />
+                  <circle cx="12" cy="12" r="1.5" />
+                  <circle cx="19" cy="12" r="1.5" />
+                </svg>
+              </button>
+              {mobileMenuOpen && (
+                <div className="absolute right-0 top-full z-20 mt-1.5 w-44 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 shadow-2xl">
+                  <Link
+                    href="/profile/edit"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-3 text-sm text-zinc-300 transition-colors hover:bg-zinc-800"
+                  >
+                    ✏️ Editar perfil
+                  </Link>
+                  <Link
+                    href={`/profile/${profile.username}/saved`}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-3 text-sm text-zinc-300 transition-colors hover:bg-zinc-800"
+                  >
+                    🔖 Posts salvos
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => { setMobileMenuOpen(false); void handleSignOut() }}
+                    className="flex w-full items-center gap-2.5 px-4 py-3 text-sm text-red-400 transition-colors hover:bg-zinc-800"
+                  >
+                    🚪 Sair
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Desktop: original buttons (hidden on mobile) */}
+            <div className="hidden md:flex md:items-center md:gap-2">
+              <Link
+                href="/profile/edit"
+                className="rounded-xl border border-zinc-600 px-3 py-2 text-sm font-medium text-zinc-300 transition-colors hover:border-zinc-400 hover:text-zinc-100"
+              >
+                Editar perfil
+              </Link>
+              <Link
+                href={`/profile/${profile.username}/saved`}
+                className="rounded-xl border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-400 transition-colors hover:border-zinc-500 hover:text-zinc-200"
+              >
+                🔖 Salvos
+              </Link>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                aria-label="Sair"
+                className="xl:hidden rounded-xl border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-500 transition-colors hover:border-red-800 hover:bg-red-950/40 hover:text-red-400"
+              >
+                Sair
+              </button>
+            </div>
+          </>
         ) : (
           <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
             <FollowButton
