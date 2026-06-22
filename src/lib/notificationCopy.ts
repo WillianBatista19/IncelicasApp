@@ -35,6 +35,10 @@ export function notificationText(
       return `${actorName} enviou uma mensagem em grupo`
     case 'story_like':
       return `${actorName} curtiu seu story`
+    case 'follow_request':
+      return `${actorName} quer te seguir`
+    case 'follow_accepted':
+      return `${actorName} aceitou seu pedido de seguir`
   }
 }
 
@@ -50,7 +54,9 @@ export function notificationEmoji(type: NotificationType): string {
     case 'comment_like':   return '❤️'
     case 'message':        return '💬'
     case 'group_message':  return '💬'
-    case 'story_like':     return '❤️'
+    case 'story_like':       return '❤️'
+    case 'follow_request':   return '🔒'
+    case 'follow_accepted':  return '✅'
   }
 }
 
@@ -78,6 +84,9 @@ export function notificationHref(
     case 'repost':
       return postId ? `/post/${postId}` : `/profile/${username}`
     case 'story_like':
+    case 'follow_request':
+      return `/profile/${username}`
+    case 'follow_accepted':
       return `/profile/${username}`
     default:
       // vibe, mention

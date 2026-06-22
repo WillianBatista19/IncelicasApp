@@ -12,6 +12,8 @@ export type NotificationType =
   | 'message'
   | 'group_message'
   | 'story_like'
+  | 'follow_request'
+  | 'follow_accepted'
 
 export interface WatchingNow {
   id:         number
@@ -34,6 +36,7 @@ export interface Profile {
   avatar_url:      string | null
   bio:             string | null
   created_at:      string
+  is_private:      boolean
   lastfm_username: string | null
   watching_now:    WatchingNow | null
   reading_now:     ReadingNow  | null

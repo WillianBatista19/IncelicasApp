@@ -27,6 +27,9 @@ type Props = {
   currentUserId:         string
   currentUserUsername?:  string | null
   isOwnProfile:          boolean
+  isPrivate?:            boolean
+  contentBlocked?:       boolean
+  pendingRequestId?:     string | null
   postCount:             number
   initialFollowerCount:  number
   followingCount:        number
@@ -38,6 +41,9 @@ export default function ProfileInteractive({
   currentUserId,
   currentUserUsername,
   isOwnProfile,
+  isPrivate = false,
+  contentBlocked = false,
+  pendingRequestId = null,
   postCount,
   initialFollowerCount,
   followingCount,
@@ -198,6 +204,8 @@ export default function ProfileInteractive({
             <FollowButton
               targetUserId={profile.id}
               currentUserId={currentUserId}
+              isPrivate={isPrivate}
+              pendingRequestId={pendingRequestId}
               onFollowChange={handleFollowChange}
             />
             <button
@@ -228,6 +236,7 @@ export default function ProfileInteractive({
         <h1 className="flex items-center gap-2 text-xl font-bold text-zinc-100">
           {name}
           {isVerified(profile.username) && <VerifiedBadge className="h-5 w-5" />}
+          {isPrivate && <span className="text-base text-zinc-500" title="Perfil privado">🔒</span>}
         </h1>
         <p className="text-sm text-zinc-500">@{profile.username}</p>
       </div>
@@ -237,25 +246,33 @@ export default function ProfileInteractive({
         <p className="mt-3 text-sm leading-relaxed text-zinc-300">{profile.bio}</p>
       )}
 
-      {/* Stats — followers and following are clickable to open the list modal */}
+      {/* Stats — followers and following are clickable unless content is blocked */}
       <div className="mt-5 flex gap-6 border-t border-zinc-800 pt-4">
         <Stat value={postCount} label="Posts" />
 
-        <button
-          type="button"
-          onClick={() => setActiveModal('followers')}
-          className="text-left transition-opacity hover:opacity-70"
-        >
+        {contentBlocked ? (
           <Stat value={followerCount} label="Seguidores" />
-        </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setActiveModal('followers')}
+            className="text-left transition-opacity hover:opacity-70"
+          >
+            <Stat value={followerCount} label="Seguidores" />
+          </button>
+        )}
 
-        <button
-          type="button"
-          onClick={() => setActiveModal('following')}
-          className="text-left transition-opacity hover:opacity-70"
-        >
+        {contentBlocked ? (
           <Stat value={followingCount} label="Seguindo" />
-        </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setActiveModal('following')}
+            className="text-left transition-opacity hover:opacity-70"
+          >
+            <Stat value={followingCount} label="Seguindo" />
+          </button>
+        )}
       </div>
 
       {activeModal && (

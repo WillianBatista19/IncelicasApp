@@ -1,10 +1,9 @@
 {
-  "/api/lastfm/route": "app/api/lastfm/route.js",
-  "/(app)/feed/page": "app/(app)/feed/page.js",
-  "/(app)/profile/[username]/saved/page": "app/(app)/profile/[username]/saved/page.js",
-  "/(app)/profile/[username]/page": "app/(app)/profile/[username]/page.js",
-  "/(app)/profile/edit/page": "app/(app)/profile/edit/page.js",
-  "/(app)/explore/page": "app/(app)/explore/page.js",
   "/_not-found/page": "app/_not-found/page.js",
-  "/icon.svg/route": "app/icon.svg/route.js"
+  "/api/lastfm/route": "app/api/lastfm/route.js",
+  "/icon.svg/route": "app/icon.svg/route.js",
+  "/(app)/feed/page": "app/(app)/feed/page.js",
+  "/(app)/profile/[username]/page": "app/(app)/profile/[username]/page.js",
+  "/(app)/post/[id]/page": "app/(app)/post/[id]/page.js",
+  "/(app)/notifications/page": "app/(app)/notifications/page.js"
 }

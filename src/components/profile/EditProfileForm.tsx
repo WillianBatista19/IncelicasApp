@@ -79,6 +79,7 @@ export default function EditProfileForm({ profile }: { profile: Profile }) {
   const [favoriteBook,    setFavoriteBook]    = useState<ReadingNow  | null>(parseJsonField<ReadingNow>(profile.favorite_book))
   const [showFavoriteFilmSearch, setShowFavoriteFilmSearch] = useState(false)
   const [showFavoriteBookSearch, setShowFavoriteBookSearch] = useState(false)
+  const [isPrivate, setIsPrivate] = useState(profile.is_private ?? false)
 
   const fileRef  = useRef<HTMLInputElement>(null)
   const supabase = useMemo(() => createClient(), [])
@@ -199,6 +200,7 @@ export default function EditProfileForm({ profile }: { profile: Profile }) {
         goodreads_rating:      goodreadsRating ?? null,
         favorite_film:         favoriteFilm,
         favorite_book:         favoriteBook,
+        is_private:            isPrivate,
       })
       .eq('id', profile.id)
 
@@ -273,6 +275,34 @@ export default function EditProfileForm({ profile }: { profile: Profile }) {
 
         {/* Fields */}
         <div className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+
+          {/* Privacy toggle */}
+          <div className="flex items-start justify-between gap-4 pb-4 border-b border-zinc-800">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Perfil privado</p>
+              <p className="mt-0.5 text-xs text-zinc-600">
+                Somente seguidores aprovados podem ver seus posts e seguidores
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isPrivate}
+              aria-label="Perfil privado"
+              onClick={() => setIsPrivate(v => !v)}
+              className={[
+                'relative mt-0.5 inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none',
+                isPrivate ? 'bg-[#D4537E]' : 'bg-zinc-700',
+              ].join(' ')}
+            >
+              <span
+                className={[
+                  'inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200',
+                  isPrivate ? 'translate-x-5' : 'translate-x-0',
+                ].join(' ')}
+              />
+            </button>
+          </div>
 
           <FormField label="Nome">
             <input

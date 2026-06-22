@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import ProfileInteractive from '@/components/profile/ProfileInteractive'
 import PostGrid from '@/components/profile/PostGrid'
+import FollowRequestsSection from '@/components/profile/FollowRequestsSection'
 import LastfmWidget from '@/components/profile/LastfmWidget'
 import SteamWidget from '@/components/profile/SteamWidget'
 import GoodreadsWidget from '@/components/profile/GoodreadsWidget'
@@ -91,7 +92,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id, username, display_name, avatar_url, bio, created_at, lastfm_username, watching_now, reading_now, anime_title, anime_cover_url, steam_id, goodreads_book_title, goodreads_book_author, goodreads_cover_url, goodreads_rating, favorite_film, favorite_book')
+    .select('id, username, display_name, avatar_url, bio, created_at, is_private, lastfm_username, watching_now, reading_now, anime_title, anime_cover_url, steam_id, goodreads_book_title, goodreads_book_author, goodreads_cover_url, goodreads_rating, favorite_film, favorite_book')
     .eq('username', username)
     .single()
 
@@ -113,6 +114,20 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const favoriteBook = parseJson<ReadingNow>(profile.favorite_book)
 
   const isOwnProfile = user.id === profile.id
+  const isPrivate    = !!(profile as { is_private?: boolean }).is_private
+
+  // For private profiles viewed by other users: check follow/request state
+  let contentBlocked   = false
+  let pendingRequestId: string | null = null
+
+  if (isPrivate && !isOwnProfile) {
+    const [followCheck, requestCheck] = await Promise.all([
+      supabase.from('follows').select('follower_id').eq('follower_id', user.id).eq('following_id', profile.id).maybeSingle(),
+      supabase.from('follow_requests').select('id').eq('requester_id', user.id).eq('target_id', profile.id).maybeSingle(),
+    ])
+    contentBlocked   = !followCheck.data
+    pendingRequestId = (requestCheck.data as { id: string } | null)?.id ?? null
+  }
 
   const currentUserUsername = isOwnProfile
     ? profile.username
@@ -153,11 +168,28 @@ export default async function ProfilePage({ params, searchParams }: Props) {
         currentUserId={user.id}
         currentUserUsername={currentUserUsername}
         isOwnProfile={isOwnProfile}
+        isPrivate={isPrivate}
+        contentBlocked={contentBlocked}
+        pendingRequestId={pendingRequestId}
         postCount={postCount}
         initialFollowerCount={followerCount}
         followingCount={followingCount}
         openStory={searchParams.openStory === 'true'}
       />
+
+      {/* Follow requests — only visible to own private profile */}
+      {isPrivate && isOwnProfile && (
+        <FollowRequestsSection profileId={profile.id} />
+      )}
+
+      {contentBlocked ? (
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-6 py-14 text-center">
+          <p className="mb-2 text-4xl">🔒</p>
+          <p className="text-sm font-semibold text-zinc-300">Este perfil é privado</p>
+          <p className="mt-1 text-xs text-zinc-500">Solicite seguir para ver os posts desta incelica.</p>
+        </div>
+      ) : (
+        <>
 
       {hasAny && (
         <AccordionRoot defaultDesktopOpen={['music']}>
@@ -218,6 +250,9 @@ export default async function ProfilePage({ params, searchParams }: Props) {
         displayName={profile.display_name || profile.username}
         currentUserId={user.id}
       />
+
+        </>
+      )}
     </div>
   )
 }

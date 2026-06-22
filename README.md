@@ -291,10 +291,10 @@ Adicione as variáveis de ambiente no painel do Vercel em **Settings → Environ
 
 - [✅] Mensagens diretas entre usuários
 - [✅] Grupos de mensagem
-- [ ] Comunidades temáticas por interesse
+- [✅] Comunidades temáticas por interesse
+- [✅] Busca de posts por palavra-chave
+- [✅] Salvar/favoritar posts
 - [ ] Notificações push no celular (Web Push API)
-- [ ] Busca de posts por palavra-chave
-- [ ] Salvar/favoritar posts
 - [ ] PWA — instalar como app no celular
 - [ ] Moderação de conteúdo
 

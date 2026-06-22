@@ -39,6 +39,8 @@ export default function NotificationItem({ notification, currentUsername, onRead
     }
     if (type === 'story_like' && currentUsername) {
       router.push(`/profile/${currentUsername}?openStory=true`)
+    } else if (type === 'follow_request' && currentUsername) {
+      router.push(`/profile/${currentUsername}`)
     } else {
       router.push(href)
     }
