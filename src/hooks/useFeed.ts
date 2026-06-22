@@ -9,11 +9,11 @@ const PAGE_SIZE = 20
 const POST_SELECT = `
   id, user_id, content, image_url, spotify_url, youtube_url, category, created_at,
   repost_comment, repost_count,
-  profiles (id, username, display_name, avatar_url, bio, created_at),
+  profiles!posts_user_id_fkey (id, username, display_name, avatar_url, bio, created_at),
   vibes (id, post_id, user_id, type, created_at),
   original_post:repost_of (
     id, user_id, content, image_url, spotify_url, youtube_url, category, created_at,
-    profiles (id, username, display_name, avatar_url, bio, created_at)
+    profiles!posts_user_id_fkey (id, username, display_name, avatar_url, bio, created_at)
   )
 ` as const
 
@@ -29,8 +29,9 @@ export function useFeed(currentUserId: string) {
   const cursorRef      = useRef<string | null>(null)
   const hasMoreRef     = useRef(true)
   const loadingMoreRef = useRef(false)
-  // Stable ref so realtime callbacks always see the latest allowed user list
   const allowedIdsRef  = useRef<string[]>([currentUserId])
+  // When false the feed query has no .in() filter (user follows no one → show all)
+  const applyFilterRef = useRef<boolean>(false)
 
   const fetchFull = useCallback(
     async (postId: string): Promise<Post | null> => {
@@ -56,21 +57,40 @@ export function useFeed(currentUserId: string) {
     const followedIds = (followsRes.data ?? []).map(f => (f as { following_id: string }).following_id)
     const officialId  = (officialRes.data as { id: string } | null)?.id
 
+    console.log('[useFeed] follows query:', {
+      followedIds_length: followedIds.length,
+      followsError:       followsRes.error?.message ?? null,
+      officialId:         officialId ?? null,
+    })
+
     const allowedIds = Array.from(new Set([
       currentUserId,
       ...followedIds,
       ...(officialId ? [officialId] : []),
     ]))
 
+    console.log('[useFeed] allowedIds:', allowedIds)
+
     allowedIdsRef.current = allowedIds
     setFollowsAnyone(followedIds.length > 0)
 
-    const { data } = await supabase
+    // Only filter by user IDs when the user actually follows someone.
+    // If follows is empty (new user / no follows) the .in() would silently
+    // return 0 rows even if hundreds of posts exist — fall back to all posts.
+    const applyFilter = followedIds.length > 0
+    applyFilterRef.current = applyFilter
+
+    const baseQuery = supabase
       .from('posts')
       .select(POST_SELECT)
-      .in('user_id', allowedIds)
       .order('created_at', { ascending: false })
       .limit(PAGE_SIZE)
+
+    const { data, error } = await (applyFilter
+      ? baseQuery.in('user_id', allowedIds)
+      : baseQuery)
+
+    console.log('[useFeed] feed query response:', { rowCount: data?.length ?? 0, error: error ? JSON.stringify(error) : null, filtered: applyFilter })
 
     const rows = (data as unknown as Post[]) ?? []
     setPosts(rows)
@@ -86,13 +106,18 @@ export function useFeed(currentUserId: string) {
     loadingMoreRef.current = true
     setLoadingMore(true)
 
-    const { data } = await supabase
+    const baseQuery = supabase
       .from('posts')
       .select(POST_SELECT)
-      .in('user_id', allowedIdsRef.current)
       .order('created_at', { ascending: false })
       .lt('created_at', cursorRef.current)
       .limit(PAGE_SIZE)
+
+    const { data, error } = await (applyFilterRef.current
+      ? baseQuery.in('user_id', allowedIdsRef.current)
+      : baseQuery)
+
+    console.log('[useFeed] loadMore response:', { rowCount: data?.length ?? 0, error, filtered: applyFilterRef.current })
 
     const rows = (data as unknown as Post[]) ?? []
     if (rows.length > 0) {

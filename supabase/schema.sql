@@ -571,6 +571,10 @@ create policy "follows: owner delete"
   on follows for delete
   using (auth.uid() = follower_id);
 
+create policy "follows: following can remove follower"
+  on follows for delete
+  using (auth.uid() = following_id);
+
 -- ------------------------------------------------------------
 -- notifications policies
 -- ------------------------------------------------------------

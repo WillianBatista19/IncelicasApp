@@ -11,6 +11,7 @@ import VibeCheck from '@/components/feed/VibeCheck'
 import VibeListModal from '@/components/feed/VibeListModal'
 import CommentsSection from '@/components/feed/CommentsSection'
 import IncelicarButton from '@/components/feed/IncelicarButton'
+import BookmarkButton from '@/components/feed/BookmarkButton'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import VerifiedBadge from '@/components/VerifiedBadge'
 import { relativeTime } from '@/lib/utils'
@@ -191,13 +192,16 @@ const PostCard = memo(function PostCard({ post, currentUserId, currentUserUserna
 
           <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-zinc-800 pt-3">
             <VibeCheck postId={post.id} initialVibes={post.vibes} currentUserId={currentUserId} onShowVibes={() => setShowVibesModal(true)} />
-            <button
-              type="button"
-              onClick={() => setShowComments(v => !v)}
-              className="ml-auto shrink-0 text-xs text-zinc-500 transition-colors hover:text-zinc-300"
-            >
-              💬 {commentLabel}
-            </button>
+            <div className="ml-auto flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowComments(v => !v)}
+                className="shrink-0 text-xs text-zinc-500 transition-colors hover:text-zinc-300"
+              >
+                💬 {commentLabel}
+              </button>
+              <BookmarkButton postId={post.id} currentUserId={currentUserId} />
+            </div>
           </div>
 
           {!showComments && previewComment && (
@@ -344,13 +348,16 @@ const PostCard = memo(function PostCard({ post, currentUserId, currentUserUserna
             />
           )}
 
-          <button
-            type="button"
-            onClick={() => setShowComments(v => !v)}
-            className="ml-auto shrink-0 text-xs text-zinc-500 transition-colors hover:text-zinc-300"
-          >
-            💬 {commentLabel}
-          </button>
+          <div className="ml-auto flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowComments(v => !v)}
+              className="shrink-0 text-xs text-zinc-500 transition-colors hover:text-zinc-300"
+            >
+              💬 {commentLabel}
+            </button>
+            <BookmarkButton postId={post.id} currentUserId={currentUserId} />
+          </div>
         </div>
 
         {!showComments && previewComment && (

@@ -121,6 +121,12 @@ export default function ProfileInteractive({
             >
               Editar perfil
             </Link>
+            <Link
+              href={`/profile/${profile.username}/saved`}
+              className="rounded-xl border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-400 transition-colors hover:border-zinc-500 hover:text-zinc-200"
+            >
+              🔖 Salvos
+            </Link>
             <button
               type="button"
               onClick={handleSignOut}
@@ -200,6 +206,8 @@ export default function ProfileInteractive({
           type={activeModal}
           profileId={profile.id}
           currentUserId={currentUserId}
+          isOwnProfile={isOwnProfile}
+          onFollowerRemoved={() => setFollowerCount(c => c - 1)}
           onClose={() => setActiveModal(null)}
         />
       )}

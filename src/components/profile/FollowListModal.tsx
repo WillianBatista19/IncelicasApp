@@ -14,17 +14,27 @@ type UserRow = {
 }
 
 type Props = {
-  type:          'followers' | 'following'
-  profileId:     string
-  currentUserId: string
-  onClose:       () => void
+  type:               'followers' | 'following'
+  profileId:          string
+  currentUserId:      string
+  isOwnProfile?:      boolean
+  onFollowerRemoved?: () => void
+  onClose:            () => void
 }
 
-export default function FollowListModal({ type, profileId, currentUserId, onClose }: Props) {
+export default function FollowListModal({
+  type,
+  profileId,
+  currentUserId,
+  isOwnProfile,
+  onFollowerRemoved,
+  onClose,
+}: Props) {
   const supabase = useMemo(() => createClient(), [])
-  const [users, setUsers] = useState<UserRow[] | null>(null)
+  const [users,           setUsers]           = useState<UserRow[] | null>(null)
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
+  const [removing,        setRemoving]        = useState(false)
 
-  // Close on Escape
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose()
@@ -33,20 +43,18 @@ export default function FollowListModal({ type, profileId, currentUserId, onClos
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  // Lock body scroll while modal is open
   useEffect(() => {
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = prev }
   }, [])
 
-  // Fetch the list
   useEffect(() => {
     async function load() {
       setUsers(null)
+      setConfirmRemoveId(null)
 
       if (type === 'followers') {
-        // People who follow this profile — join via follower_id
         const { data } = await supabase
           .from('follows')
           .select('profile:profiles!follower_id(id, username, display_name, avatar_url)')
@@ -59,7 +67,6 @@ export default function FollowListModal({ type, profileId, currentUserId, onClos
             .filter((p): p is UserRow => p !== null),
         )
       } else {
-        // People this profile follows — join via following_id
         const { data } = await supabase
           .from('follows')
           .select('profile:profiles!following_id(id, username, display_name, avatar_url)')
@@ -76,10 +83,28 @@ export default function FollowListModal({ type, profileId, currentUserId, onClos
     load()
   }, [supabase, type, profileId])
 
-  const title = type === 'followers' ? 'Seguidores' : 'Seguindo'
+  async function removeFollower(userId: string) {
+    setRemoving(true)
+    const { error } = await supabase
+      .from('follows')
+      .delete()
+      .eq('follower_id', userId)      // the person being removed
+      .eq('following_id', profileId)  // the profile owner (current user)
+    console.log('[removeFollower]', { follower_id: userId, following_id: profileId, error })
+    if (!error) {
+      setUsers(prev => prev?.filter(u => u.id !== userId) ?? null)
+      setConfirmRemoveId(null)
+      onFollowerRemoved?.()
+    }
+    setRemoving(false)
+  }
+
+  const title     = type === 'followers' ? 'Seguidores' : 'Seguindo'
   const emptyText = type === 'followers'
     ? 'Ainda não tem incelicas seguindo.'
     : 'Ainda não segue ninguém.'
+
+  const canRemove = isOwnProfile && type === 'followers'
 
   return (
     <div
@@ -117,29 +142,67 @@ export default function FollowListModal({ type, profileId, currentUserId, onClos
           ) : (
             <ul className="divide-y divide-zinc-800/60">
               {users.map(user => {
-                const name = user.display_name || user.username
-                return (
-                  <li key={user.id} className="flex items-center gap-3 px-5 py-3">
-                    <Link href={`/profile/${user.username}`} onClick={onClose} className="shrink-0">
-                      <Avatar src={user.avatar_url} name={name} size="md" />
-                    </Link>
+                const name         = user.display_name || user.username
+                const isConfirming = confirmRemoveId === user.id
 
-                    <div className="min-w-0 flex-1">
-                      <Link
-                        href={`/profile/${user.username}`}
-                        onClick={onClose}
-                        className="block truncate text-sm font-semibold text-zinc-100 hover:underline"
-                      >
-                        {name}
+                return (
+                  <li key={user.id} className="px-5 py-3">
+                    <div className="flex items-center gap-3">
+                      <Link href={`/profile/${user.username}`} onClick={onClose} className="shrink-0">
+                        <Avatar src={user.avatar_url} name={name} size="md" />
                       </Link>
-                      <p className="truncate text-xs text-zinc-500">@{user.username}</p>
+
+                      <div className="min-w-0 flex-1">
+                        <Link
+                          href={`/profile/${user.username}`}
+                          onClick={onClose}
+                          className="block truncate text-sm font-semibold text-zinc-100 hover:underline"
+                        >
+                          {name}
+                        </Link>
+                        <p className="truncate text-xs text-zinc-500">@{user.username}</p>
+                      </div>
+
+                      {canRemove ? (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmRemoveId(isConfirming ? null : user.id)}
+                          className="shrink-0 rounded-lg border border-zinc-700 px-2.5 py-1 text-xs font-medium text-zinc-400 transition-colors hover:border-red-700 hover:bg-red-950/40 hover:text-red-400"
+                        >
+                          Remover
+                        </button>
+                      ) : user.id !== currentUserId ? (
+                        <FollowButton
+                          targetUserId={user.id}
+                          currentUserId={currentUserId}
+                        />
+                      ) : null}
                     </div>
 
-                    {user.id !== currentUserId && (
-                      <FollowButton
-                        targetUserId={user.id}
-                        currentUserId={currentUserId}
-                      />
+                    {isConfirming && (
+                      <div className="mt-2.5 rounded-xl border border-zinc-700 bg-zinc-900 p-3">
+                        <p className="text-xs text-zinc-300">
+                          Remover <span className="font-semibold text-zinc-100">@{user.username}</span> dos seus seguidores?
+                        </p>
+                        <div className="mt-2 flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => void removeFollower(user.id)}
+                            disabled={removing}
+                            className="flex-1 rounded-lg bg-red-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+                          >
+                            {removing ? '…' : 'Remover'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmRemoveId(null)}
+                            disabled={removing}
+                            className="flex-1 rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:border-zinc-500 hover:text-zinc-300 disabled:opacity-50"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
                     )}
                   </li>
                 )
