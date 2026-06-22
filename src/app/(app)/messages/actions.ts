@@ -1,10 +1,10 @@
 'use server'
 
+import { randomUUID } from 'crypto'
 import { createHash } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 
 // Deterministic UUID from sorted user-ID pair — same two users always get same conversation.
-// SHA-256 hex sliced into 8-4-4-4-12 UUID format; Postgres accepts any valid hex UUID.
 function pairConversationId(uid1: string, uid2: string): string {
   const [a, b] = [uid1, uid2].sort()
   const h = createHash('sha256').update(`${a}:${b}`).digest('hex')
@@ -21,15 +21,12 @@ export async function getOrCreateConversation(
 
   const conversationId = pairConversationId(user.id, otherUserId)
 
-  // Plain insert — no .select() so PostgREST never runs the SELECT policy.
-  // Duplicate-key error (23505) means the conversation already exists; treat as success.
   const { error: convErr } = await supabase
     .from('conversations')
     .insert({ id: conversationId })
 
   if (convErr && convErr.code !== '23505') return { error: convErr.message }
 
-  // Same pattern for participants — plain insert, ignore duplicate-key errors.
   const { error: partErr } = await supabase
     .from('conversation_participants')
     .insert([
@@ -40,6 +37,110 @@ export async function getOrCreateConversation(
   if (partErr && partErr.code !== '23505') return { error: partErr.message }
 
   return { conversationId }
+}
+
+export async function createGroupConversation(
+  groupName: string,
+  memberIds: string[],
+): Promise<{ conversationId: string } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autenticado' }
+  if (!groupName.trim()) return { error: 'Nome do grupo é obrigatório' }
+
+  const conversationId = randomUUID()
+
+  // Plain insert — no .select() to avoid SELECT RLS before participants are added
+  const { error: convErr } = await supabase
+    .from('conversations')
+    .insert({ id: conversationId, is_group: true, group_name: groupName.trim(), created_by: user.id })
+
+  if (convErr) return { error: convErr.message }
+
+  // Creator + all selected members
+  const allIds = Array.from(new Set([user.id, ...memberIds]))
+  const { error: partErr } = await supabase
+    .from('conversation_participants')
+    .insert(allIds.map(uid => ({ conversation_id: conversationId, user_id: uid })))
+
+  if (partErr) return { error: partErr.message }
+
+  return { conversationId }
+}
+
+export async function updateGroupName(
+  conversationId: string,
+  newName: string,
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autenticado' }
+
+  const { data: conv } = await supabase
+    .from('conversations')
+    .select('created_by')
+    .eq('id', conversationId)
+    .single()
+
+  if ((conv as { created_by: string } | null)?.created_by !== user.id)
+    return { error: 'Apenas o criador pode alterar o nome' }
+
+  const { error } = await supabase
+    .from('conversations')
+    .update({ group_name: newName.trim() })
+    .eq('id', conversationId)
+
+  return { error: error?.message }
+}
+
+export async function addGroupMember(
+  conversationId: string,
+  memberId: string,
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autenticado' }
+
+  const { data: conv } = await supabase
+    .from('conversations')
+    .select('created_by')
+    .eq('id', conversationId)
+    .single()
+
+  if ((conv as { created_by: string } | null)?.created_by !== user.id)
+    return { error: 'Apenas o criador pode adicionar membros' }
+
+  const { error } = await supabase
+    .from('conversation_participants')
+    .insert({ conversation_id: conversationId, user_id: memberId })
+
+  return { error: error?.message }
+}
+
+export async function removeGroupMember(
+  conversationId: string,
+  memberId: string,
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autenticado' }
+
+  const { data: conv } = await supabase
+    .from('conversations')
+    .select('created_by')
+    .eq('id', conversationId)
+    .single()
+
+  if ((conv as { created_by: string } | null)?.created_by !== user.id)
+    return { error: 'Apenas o criador pode remover membros' }
+
+  const { error } = await supabase
+    .from('conversation_participants')
+    .delete()
+    .eq('conversation_id', conversationId)
+    .eq('user_id', memberId)
+
+  return { error: error?.message }
 }
 
 export async function markConversationRead(conversationId: string): Promise<void> {
@@ -54,8 +155,6 @@ export async function markConversationRead(conversationId: string): Promise<void
     .eq('user_id', user.id)
 }
 
-// recipientUserId is passed by the caller — MessagesClient already knows it
-// from selectedConv.otherUser.id, so no participant lookup is needed here.
 export async function createMessageNotification(
   recipientUserId: string,
 ): Promise<void> {
@@ -63,7 +162,6 @@ export async function createMessageNotification(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
-  // Only create one notification per sender while previous ones are unread
   const { data: existing } = await supabase
     .from('notifications')
     .select('id')
@@ -79,5 +177,41 @@ export async function createMessageNotification(
       from_user_id: user.id,
       type:         'message',
     })
+  }
+}
+
+export async function createGroupMessageNotifications(
+  conversationId: string,
+): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  const { data: parts } = await supabase
+    .from('conversation_participants')
+    .select('user_id')
+    .eq('conversation_id', conversationId)
+    .neq('user_id', user.id)
+
+  if (!parts?.length) return
+
+  for (const { user_id } of parts) {
+    const { data: existing } = await supabase
+      .from('notifications')
+      .select('id')
+      .eq('user_id', user_id)
+      .eq('from_user_id', user.id)
+      .eq('type', 'group_message')
+      .eq('read', false)
+      .maybeSingle()
+
+    if (!existing) {
+      await supabase.from('notifications').insert({
+        user_id,
+        from_user_id: user.id,
+        type:         'group_message',
+        read:         false,
+      })
+    }
   }
 }

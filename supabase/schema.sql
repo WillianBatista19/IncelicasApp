@@ -653,3 +653,26 @@ alter publication supabase_realtime add table posts;
 alter publication supabase_realtime add table vibes;
 alter publication supabase_realtime add table comments;
 alter publication supabase_realtime add table notifications;
+
+-- ============================================================
+-- Group conversations — migration (run manually in Supabase SQL Editor)
+-- ============================================================
+
+-- alter table conversations add column is_group       boolean not null default false;
+-- alter table conversations add column group_name     text;
+-- alter table conversations add column group_avatar_url text;
+-- alter table conversations add column created_by     uuid references profiles (id);
+
+-- RLS: allow authenticated users to insert conversations (needed for group creation)
+-- create policy "conversations: authenticated insert"
+--   on conversations for insert
+--   with check (auth.uid() IS NOT NULL);
+
+-- Allow conversation creator to update group metadata
+-- create policy "conversations: creator update"
+--   on conversations for update
+--   using (auth.uid() = created_by)
+--   with check (auth.uid() = created_by);
+
+-- Allow participants to insert their own row (needed for addGroupMember action)
+-- The existing conversation_participants insert policy should cover auth.uid() = user_id

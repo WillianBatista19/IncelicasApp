@@ -10,6 +10,7 @@ export type NotificationType =
   | 'repost'
   | 'mention'
   | 'message'
+  | 'group_message'
   | 'story_like'
 
 export interface WatchingNow {
@@ -119,16 +120,23 @@ export interface ConversationMessage {
   created_at:      string
 }
 
+export interface ConversationParticipant {
+  id:           string
+  username:     string
+  display_name: string | null
+  avatar_url:   string | null
+}
+
 export interface ConversationSummary {
-  id:         string
-  lastReadAt: string | null
-  otherUser: {
-    id:           string
-    username:     string
-    display_name: string | null
-    avatar_url:   string | null
-  }
-  lastMessage: ConversationMessage | null
+  id:             string
+  lastReadAt:     string | null
+  isGroup:        boolean
+  groupName:      string | null
+  groupAvatarUrl: string | null
+  createdBy:      string | null
+  participants:   ConversationParticipant[]
+  otherUser:      ConversationParticipant | null
+  lastMessage:    ConversationMessage | null
 }
 
 export interface Post {

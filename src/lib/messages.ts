@@ -1,30 +1,25 @@
 import { createClient } from '@/lib/supabase/server'
-import type { ConversationMessage, ConversationSummary } from '@/types'
+import type { ConversationMessage, ConversationParticipant, ConversationSummary } from '@/types'
 
 export async function fetchConversationList(userId: string): Promise<ConversationSummary[]> {
   const supabase = await createClient()
 
-  console.log('[fetchConversationList] start — userId:', userId)
-
-  // Step 1: get my conversation IDs (own rows, always works with any RLS)
+  // Step 1: get my conversation IDs
   const { data: myParts, error: myPartsErr } = await supabase
     .from('conversation_participants')
     .select('conversation_id, last_read_at')
     .eq('user_id', userId)
 
-  console.log('[fetchConversationList] myParts:', JSON.stringify(myParts))
-  if (myPartsErr) console.error('[fetchConversationList] myParts error:', myPartsErr.message, myPartsErr.code)
+  if (myPartsErr) console.error('[fetchConversationList] myParts error:', myPartsErr.message)
 
   const convIds = (myParts ?? []).map(p => p.conversation_id)
-  console.log('[fetchConversationList] convIds:', convIds)
   if (!convIds.length) return []
 
-  // Step 2: fetch conversations with all participants + profiles
-  // Requires conversations RLS: USING (id IN (SELECT conversation_id FROM conversation_participants WHERE user_id = auth.uid()))
+  // Step 2: fetch conversations with all participants + profiles + group fields
   const { data: convRows, error: convErr } = await supabase
     .from('conversations')
     .select(`
-      id,
+      id, is_group, group_name, group_avatar_url, created_by,
       conversation_participants (
         user_id,
         last_read_at,
@@ -33,19 +28,15 @@ export async function fetchConversationList(userId: string): Promise<Conversatio
     `)
     .in('id', convIds)
 
-  console.log('[fetchConversationList] convRows:', JSON.stringify(convRows, null, 2))
-  if (convErr) console.error('[fetchConversationList] convRows error:', convErr.message, convErr.code)
-
+  if (convErr) console.error('[fetchConversationList] convRows error:', convErr.message)
   if (!convRows?.length) return []
 
   // Step 3: last message per conversation
-  const { data: msgs, error: msgsErr } = await supabase
+  const { data: msgs } = await supabase
     .from('messages')
     .select('id, conversation_id, sender_id, content, created_at')
     .in('conversation_id', convIds)
     .order('created_at', { ascending: false })
-
-  console.log('[fetchConversationList] msgs count:', msgs?.length ?? 0, '| error:', msgsErr?.message)
 
   const lastMsgByConv: Record<string, ConversationMessage> = {}
   for (const msg of msgs ?? []) {
@@ -64,29 +55,48 @@ export async function fetchConversationList(userId: string): Promise<Conversatio
     }[] | null
   }
 
-  const result = convRows.flatMap(conv => {
-    const parts     = (conv.conversation_participants ?? []) as unknown as RawParticipant[]
-    const myPart    = parts.find(p => p.user_id === userId)
-    const otherPart = parts.find(p => p.user_id !== userId)
-    const rawProf   = otherPart?.profiles
-    const prof      = Array.isArray(rawProf) ? rawProf[0] : rawProf
+  type RawConv = {
+    id:             string
+    is_group:       boolean | null
+    group_name:     string | null
+    group_avatar_url: string | null
+    created_by:     string | null
+    conversation_participants: unknown
+  }
 
-    console.log(
-      `[fetchConversationList] conv ${conv.id} — participants: [${parts.map(p => p.user_id).join(', ')}]`,
-      '| otherPart:', !!otherPart, '| prof:', !!prof,
-    )
+  const result = (convRows as unknown as RawConv[]).flatMap(conv => {
+    const parts  = (conv.conversation_participants ?? []) as unknown as RawParticipant[]
+    const myPart = parts.find(p => p.user_id === userId)
+    if (!myPart) return []
 
-    if (!myPart || !prof) return []
+    const isGroup = conv.is_group ?? false
+
+    const participants: ConversationParticipant[] = parts.flatMap(p => {
+      const rawProf = p.profiles
+      const prof    = Array.isArray(rawProf) ? rawProf[0] : rawProf
+      if (!prof) return []
+      return [{ id: prof.id, username: prof.username, display_name: prof.display_name, avatar_url: prof.avatar_url }]
+    })
+
+    let otherUser: ConversationParticipant | null = null
+    if (!isGroup) {
+      const otherPart = parts.find(p => p.user_id !== userId)
+      const rawProf   = otherPart?.profiles
+      const prof      = Array.isArray(rawProf) ? rawProf[0] : rawProf
+      if (!prof) return []
+      otherUser = { id: prof.id, username: prof.username, display_name: prof.display_name, avatar_url: prof.avatar_url }
+    }
+
     return [{
-      id:         conv.id,
-      lastReadAt: myPart.last_read_at ?? null,
-      otherUser: {
-        id:           prof.id,
-        username:     prof.username,
-        display_name: prof.display_name,
-        avatar_url:   prof.avatar_url,
-      },
-      lastMessage: lastMsgByConv[conv.id] ?? null,
+      id:             conv.id,
+      lastReadAt:     myPart.last_read_at ?? null,
+      isGroup,
+      groupName:      conv.group_name,
+      groupAvatarUrl: conv.group_avatar_url,
+      createdBy:      conv.created_by,
+      participants,
+      otherUser,
+      lastMessage:    lastMsgByConv[conv.id] ?? null,
     } satisfies ConversationSummary]
   }).sort((a, b) => {
     const at = a.lastMessage?.created_at ?? ''
@@ -94,6 +104,5 @@ export async function fetchConversationList(userId: string): Promise<Conversatio
     return bt.localeCompare(at)
   })
 
-  console.log('[fetchConversationList] returning', result.length, 'conversations')
   return result
 }
