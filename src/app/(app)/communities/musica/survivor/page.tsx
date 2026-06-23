@@ -21,6 +21,18 @@ export interface PastEventSummary {
   winner_track: string | null
 }
 
+function parseVotes(raw: Record<string, unknown>[] | null): VoteWithProfile[] {
+  return (raw ?? []).map(v => ({
+    id:       v.id as string,
+    track_id: v.track_id as string,
+    user_id:  v.user_id as string,
+    profiles: (() => {
+      const p = v.profiles
+      return (Array.isArray(p) ? p[0] : p) as VoteWithProfile['profiles']
+    })(),
+  }))
+}
+
 export default async function SurvivorPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -56,40 +68,46 @@ export default async function SurvivorPage() {
   let tracks: SurvivorTrack[] = []
   let currentVotes: VoteWithProfile[] = []
   let userVoteId: string | null = null
+  let tiebreakVotes: VoteWithProfile[] = []
+  let userTiebreakVoteId: string | null = null
 
   if (activeEvent) {
-    const [tracksRes, votesRes] = await Promise.all([
-      supabase
-        .from('survivor_tracks')
-        .select('*')
-        .eq('event_id', activeEvent.id)
-        .order('track_number'),
+    const queries: Promise<{ data: Record<string, unknown>[] | null }>[] = [
       supabase
         .from('survivor_votes')
         .select('id, track_id, user_id, profiles!survivor_votes_user_id_fkey(username, display_name, avatar_url)')
         .eq('event_id', activeEvent.id)
-        .eq('round', activeEvent.current_round),
+        .eq('round', activeEvent.current_round)
+        .eq('is_tiebreak', false) as unknown as Promise<{ data: Record<string, unknown>[] | null }>,
+    ]
+
+    if (activeEvent.tiebreak_active && activeEvent.tiebreak_round !== null) {
+      queries.push(
+        supabase
+          .from('survivor_votes')
+          .select('id, track_id, user_id, profiles!survivor_votes_user_id_fkey(username, display_name, avatar_url)')
+          .eq('event_id', activeEvent.id)
+          .eq('round', activeEvent.tiebreak_round)
+          .eq('is_tiebreak', true) as unknown as Promise<{ data: Record<string, unknown>[] | null }>,
+      )
+    }
+
+    const [tracksRes, regularVotesRes, tiebreakVotesRes] = await Promise.all([
+      supabase.from('survivor_tracks').select('*').eq('event_id', activeEvent.id).order('track_number'),
+      ...queries,
     ])
 
     tracks = (tracksRes.data ?? []) as SurvivorTrack[]
-
-    const rawVotes = (votesRes.data ?? []) as Record<string, unknown>[]
-    currentVotes = rawVotes.map(v => ({
-      id:       v.id as string,
-      track_id: v.track_id as string,
-      user_id:  v.user_id as string,
-      profiles: (() => {
-        const p = v.profiles
-        return (Array.isArray(p) ? p[0] : p) as VoteWithProfile['profiles']
-      })(),
-    }))
+    currentVotes = parseVotes(regularVotesRes?.data ?? [])
+    tiebreakVotes = tiebreakVotesRes ? parseVotes(tiebreakVotesRes?.data ?? []) : []
 
     if (user) {
-      userVoteId = currentVotes.find(v => v.user_id === user.id)?.track_id ?? null
+      userVoteId         = currentVotes.find(v => v.user_id === user.id)?.track_id ?? null
+      userTiebreakVoteId = tiebreakVotes.find(v => v.user_id === user.id)?.track_id ?? null
     }
   }
 
-  // Most recent finished event (for results display when no active event)
+  // Most recent finished event
   let finishedEvent: SurvivorEvent | null = null
   let finishedTracks: SurvivorTrack[] = []
 
@@ -114,7 +132,7 @@ export default async function SurvivorPage() {
     }
   }
 
-  // Past events summary for history list
+  // Past events summary
   const { data: pastRaw } = await supabase
     .from('survivor_events')
     .select('id, album_name, artist_name, cover_url, created_at')
@@ -148,6 +166,8 @@ export default async function SurvivorPage() {
         tracks={tracks}
         currentVotes={currentVotes}
         userVoteId={userVoteId}
+        tiebreakVotes={tiebreakVotes}
+        userTiebreakVoteId={userTiebreakVoteId}
         finishedEvent={finishedEvent}
         finishedTracks={finishedTracks}
         pastEvents={pastEvents}

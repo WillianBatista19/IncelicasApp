@@ -1,9 +1,5 @@
 {
-  "/changelog/page": "app/changelog/page.js",
+  "/api/deezer/route": "app/api/deezer/route.js",
   "/icon.svg/route": "app/icon.svg/route.js",
-  "/(app)/communities/[slug]/page": "app/(app)/communities/[slug]/page.js",
-  "/(app)/communities/page": "app/(app)/communities/page.js",
-  "/(app)/jogar/admin/page": "app/(app)/jogar/admin/page.js",
-  "/(app)/jogar/page": "app/(app)/jogar/page.js",
-  "/(app)/feed/page": "app/(app)/feed/page.js"
+  "/(app)/communities/musica/survivor/page": "app/(app)/communities/musica/survivor/page.js"
 }

@@ -203,16 +203,19 @@ export interface CommunityPost {
 }
 
 export interface SurvivorEvent {
-  id:            string
-  community_id:  string
-  created_by:    string
-  album_id:      string
-  album_name:    string
-  artist_name:   string
-  cover_url:     string | null
-  status:        'active' | 'finished'
-  current_round: number
-  created_at:    string
+  id:                  string
+  community_id:        string
+  created_by:          string
+  album_id:            string
+  album_name:          string
+  artist_name:         string
+  cover_url:           string | null
+  status:              'active' | 'finished'
+  current_round:       number
+  created_at:          string
+  tiebreak_active:     boolean
+  tiebreak_track_ids:  string[]
+  tiebreak_round:      number | null
 }
 
 export interface SurvivorTrack {

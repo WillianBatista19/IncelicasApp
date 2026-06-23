@@ -25,16 +25,18 @@ interface TrackInput {
 }
 
 interface Props {
-  activeEvent:    SurvivorEvent | null
-  tracks:         SurvivorTrack[]
-  currentVotes:   VoteWithProfile[]
-  userVoteId:     string | null
-  finishedEvent:  SurvivorEvent | null
-  finishedTracks: SurvivorTrack[]
-  pastEvents:     PastEventSummary[]
-  isOwner:        boolean
-  currentUserId:  string | null
-  communityId:    string
+  activeEvent:         SurvivorEvent | null
+  tracks:              SurvivorTrack[]
+  currentVotes:        VoteWithProfile[]
+  userVoteId:          string | null
+  tiebreakVotes:       VoteWithProfile[]
+  userTiebreakVoteId:  string | null
+  finishedEvent:       SurvivorEvent | null
+  finishedTracks:      SurvivorTrack[]
+  pastEvents:          PastEventSummary[]
+  isOwner:             boolean
+  currentUserId:       string | null
+  communityId:         string
 }
 
 // ─── small helpers ───────────────────────────────────────────────────────────
@@ -309,27 +311,26 @@ function CreateEventModal({
 // ─── Advance Round Modal ──────────────────────────────────────────────────────
 
 function AdvanceModal({
-  nextRound,
-  mostVotedTrack,
+  title,
+  body,
+  confirmLabel,
   onConfirm,
   onCancel,
   loading,
 }: {
-  nextRound: number
-  mostVotedTrack: string
-  onConfirm: () => void
-  onCancel: () => void
-  loading: boolean
+  title:        string
+  body:         string
+  confirmLabel: string
+  onConfirm:    () => void
+  onCancel:     () => void
+  loading:      boolean
 }) {
   useModalLock(true)
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
       <div className="w-full max-w-sm rounded-xl bg-zinc-900 border border-white/10 p-5 space-y-4">
-        <h2 className="font-bold text-white text-center">Avançar para Rodada {nextRound}?</h2>
-        <p className="text-sm text-zinc-400 text-center">
-          A faixa mais votada será eliminada:<br />
-          <span className="text-white font-semibold">{mostVotedTrack}</span>
-        </p>
+        <h2 className="font-bold text-white text-center">{title}</h2>
+        <p className="text-sm text-zinc-400 text-center whitespace-pre-line">{body}</p>
         <div className="flex gap-2">
           <button onClick={onCancel} className="flex-1 rounded-xl bg-white/10 py-2 text-sm text-zinc-300 hover:text-white">
             Cancelar
@@ -339,7 +340,7 @@ function AdvanceModal({
             disabled={loading}
             className="flex-1 rounded-xl bg-[#D4537E] py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
-            {loading ? 'Avançando...' : 'Confirmar'}
+            {loading ? 'Processando...' : confirmLabel}
           </button>
         </div>
       </div>
@@ -350,17 +351,16 @@ function AdvanceModal({
 // ─── Finished Results ─────────────────────────────────────────────────────────
 
 function FinishedResults({ event, tracks }: { event: SurvivorEvent; tracks: SurvivorTrack[] }) {
-  const winner = tracks.find(t => t.final_position === 1)
+  const winners = tracks.filter(t => t.final_position === 1)
+  const isCoChampions = winners.length > 1
   const ordered = [...tracks].sort((a, b) => (a.final_position ?? 999) - (b.final_position ?? 999))
 
   function shareWinner() {
-    if (!winner) return
-    const text = `A música campeã de ${event.album_name} nas Incelicas é ${winner.track_name}! 🏆`
-    if (navigator.share) {
-      navigator.share({ text })
-    } else {
-      navigator.clipboard.writeText(text)
-    }
+    const text = isCoChampions
+      ? `🏆🏆 EMPATE HISTÓRICO! "${winners[0].track_name}" e "${winners[1].track_name}" são co-campeãs do Survivor de ${event.album_name} nas Incelicas!`
+      : `A música campeã de ${event.album_name} nas Incelicas é ${winners[0]?.track_name}! 🏆`
+    if (navigator.share) navigator.share({ text })
+    else navigator.clipboard.writeText(text)
   }
 
   return (
@@ -378,12 +378,26 @@ function FinishedResults({ event, tracks }: { event: SurvivorEvent; tracks: Surv
         </div>
       </div>
 
-      {winner && (
+      {isCoChampions ? (
+        <div className="rounded-xl bg-yellow-500/10 border border-yellow-500/30 p-4 space-y-2">
+          <p className="text-center text-2xl">🏆🏆</p>
+          <p className="text-xs text-yellow-400 font-semibold uppercase tracking-wider text-center">Empate na Final! Duas Campeãs</p>
+          {winners.map(w => (
+            <p key={w.id} className="font-bold text-white text-center truncate">{w.track_name}</p>
+          ))}
+          <button
+            onClick={shareWinner}
+            className="w-full rounded-xl bg-white/10 px-3 py-2 text-xs text-zinc-300 hover:text-white mt-1"
+          >
+            Compartilhar
+          </button>
+        </div>
+      ) : winners[0] ? (
         <div className="flex items-center gap-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30 p-4">
           <span className="text-3xl">🏆</span>
           <div className="min-w-0">
             <p className="text-xs text-yellow-400 font-semibold uppercase tracking-wider">Campeã</p>
-            <p className="font-bold text-white text-lg truncate">{winner.track_name}</p>
+            <p className="font-bold text-white text-lg truncate">{winners[0].track_name}</p>
           </div>
           <button
             onClick={shareWinner}
@@ -392,7 +406,7 @@ function FinishedResults({ event, tracks }: { event: SurvivorEvent; tracks: Surv
             Compartilhar
           </button>
         </div>
-      )}
+      ) : null}
 
       <div className="space-y-1">
         <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500 px-1">Ranking final</p>
@@ -426,6 +440,8 @@ function TrackCard({
   voterProfiles,
   isUserVote,
   hasVoted,
+  voteLabel,
+  isDimmed,
   onVote,
   onPreview,
   isPlaying,
@@ -438,6 +454,8 @@ function TrackCard({
   voterProfiles:    VoteWithProfile['profiles'][]
   isUserVote:       boolean
   hasVoted:         boolean
+  voteLabel:        string
+  isDimmed:         boolean
   onVote:           () => void
   onPreview:        () => void
   isPlaying:        boolean
@@ -448,14 +466,18 @@ function TrackCard({
   const isVotingThis = votingId === track.id
 
   return (
-    <div className={`rounded-xl border p-3 space-y-2 transition-colors ${
-      isUserVote ? 'bg-[#D4537E]/10 border-[#D4537E]/40' : 'bg-white/5 border-white/5'
+    <div className={`rounded-xl border p-3 space-y-2 transition-all ${
+      isDimmed
+        ? 'opacity-35 bg-white/5 border-white/5 pointer-events-none'
+        : isUserVote
+          ? 'bg-[#D4537E]/10 border-[#D4537E]/40'
+          : 'bg-white/5 border-white/5'
     }`}>
       <div className="flex items-center gap-2">
         <span className="text-xs text-zinc-500 w-5 text-right shrink-0">{track.track_number}</span>
         <span className="flex-1 text-sm text-white font-medium truncate">{track.track_name}</span>
 
-        {track.preview_url && (
+        {track.preview_url && !isDimmed && (
           <button
             onClick={onPreview}
             disabled={isLoadingPreview}
@@ -469,20 +491,22 @@ function TrackCard({
           </button>
         )}
 
-        <button
-          onClick={onVote}
-          disabled={isVotingThis}
-          className={`shrink-0 rounded-lg px-3 py-1 text-xs font-semibold transition-colors disabled:opacity-60 ${
-            isUserVote
-              ? 'bg-[#D4537E]/30 text-[#D4537E] ring-1 ring-[#D4537E]'
-              : 'bg-white/10 text-zinc-300 hover:bg-[#D4537E]/20 hover:text-[#D4537E]'
-          }`}
-        >
-          {isVotingThis ? '...' : isUserVote ? 'Votou ✓' : 'Eliminar'}
-        </button>
+        {voteLabel && !isDimmed && (
+          <button
+            onClick={onVote}
+            disabled={isVotingThis}
+            className={`shrink-0 rounded-lg px-3 py-1 text-xs font-semibold transition-colors disabled:opacity-60 ${
+              isUserVote
+                ? 'bg-[#D4537E]/30 text-[#D4537E] ring-1 ring-[#D4537E]'
+                : 'bg-white/10 text-zinc-300 hover:bg-[#D4537E]/20 hover:text-[#D4537E]'
+            }`}
+          >
+            {isVotingThis ? '...' : isUserVote ? 'Votou ✓' : voteLabel}
+          </button>
+        )}
       </div>
 
-      {hasVoted && (
+      {hasVoted && !isDimmed && (
         <>
           <div className="flex items-center gap-2">
             <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
@@ -550,23 +574,25 @@ function EventHistory({ pastEvents }: { pastEvents: PastEventSummary[] }) {
 
 export default function SurvivorClient({
   activeEvent, tracks, currentVotes, userVoteId,
+  tiebreakVotes, userTiebreakVoteId,
   finishedEvent, finishedTracks,
   pastEvents, isOwner, currentUserId, communityId,
 }: Props) {
   const router = useRouter()
   const [, startTransition] = useTransition()
-  const [votingId, setVotingId]         = useState<string | null>(null)
-  const [showAdvance, setShowAdvance]   = useState(false)
-  const [advancing, setAdvancing]       = useState(false)
-  const [showCreate, setShowCreate]     = useState(false)
-  const [toast, setToast]               = useState<string | null>(null)
+  const [votingId, setVotingId]                 = useState<string | null>(null)
+  const [votingTiebreakId, setVotingTiebreakId] = useState<string | null>(null)
+  const [showAdvance, setShowAdvance]           = useState(false)
+  const [advancing, setAdvancing]               = useState(false)
+  const [showCreate, setShowCreate]             = useState(false)
+  const [toast, setToast]                       = useState<string | null>(null)
   const [playingId, setPlayingId]               = useState<string | null>(null)
   const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null)
   const audioRef                                = useRef<HTMLAudioElement | null>(null)
 
   function showToast(msg: string) {
     setToast(msg)
-    setTimeout(() => setToast(null), 2500)
+    setTimeout(() => setToast(null), 3500)
   }
 
   async function togglePreview(track: SurvivorTrack) {
@@ -581,10 +607,7 @@ export default function SurvivorClient({
     setLoadingPreviewId(track.id)
     const url = await fetchDeezerPreview(track.track_name, activeEvent?.artist_name ?? '')
     setLoadingPreviewId(null)
-    if (!url) {
-      showToast('Preview não disponível para essa faixa.')
-      return
-    }
+    if (!url) { showToast('Preview não disponível para essa faixa.'); return }
     const audio = new Audio(url)
     audio.play().catch(() => showToast('Não foi possível reproduzir o preview.'))
     audio.onended = () => setPlayingId(null)
@@ -592,23 +615,25 @@ export default function SurvivorClient({
     setPlayingId(track.id)
   }
 
-  async function handleVote(trackId: string) {
+  async function handleVote(trackId: string, isTiebreak: boolean = false) {
     if (!activeEvent) return
-
-    if (userVoteId) {
-      showToast('Você já votou nessa rodada. Aguarde a próxima!')
-      return
+    if (isTiebreak) {
+      if (userTiebreakVoteId) { showToast('Você já votou no desempate!'); return }
+      setVotingTiebreakId(trackId)
+      const result = await castVote(
+        activeEvent.id, trackId,
+        activeEvent.tiebreak_round ?? activeEvent.current_round,
+        true,
+      )
+      setVotingTiebreakId(null)
+      if (result.error) { showToast(result.error); return }
+    } else {
+      if (userVoteId) { showToast('Você já votou nessa rodada. Aguarde a próxima!'); return }
+      setVotingId(trackId)
+      const result = await castVote(activeEvent.id, trackId, activeEvent.current_round)
+      setVotingId(null)
+      if (result.error) { showToast(result.error); return }
     }
-
-    setVotingId(trackId)
-    const result = await castVote(activeEvent.id, trackId, activeEvent.current_round)
-    setVotingId(null)
-
-    if (result.error) {
-      showToast(result.error)
-      return
-    }
-
     startTransition(() => router.refresh())
   }
 
@@ -616,8 +641,9 @@ export default function SurvivorClient({
     if (!activeEvent) return
     setAdvancing(true)
     try {
-      await advanceRound(activeEvent.id)
+      const result = await advanceRound(activeEvent.id)
       setShowAdvance(false)
+      if (result?.message) showToast(result.message)
       startTransition(() => router.refresh())
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erro ao avançar rodada')
@@ -630,29 +656,78 @@ export default function SurvivorClient({
   const eliminatedTracks = tracks.filter(t => t.eliminated_at_round !== null)
     .sort((a, b) => (b.eliminated_at_round ?? 0) - (a.eliminated_at_round ?? 0))
 
-  const hasVoted    = currentVotes.some(v => v.user_id === currentUserId)
-  const totalVotes  = currentVotes.length
+  const N               = survivingTracks.length
+  const tiebreakActive  = activeEvent?.tiebreak_active ?? false
+  const tiebreakIds     = activeEvent?.tiebreak_track_ids ?? []
 
-  // Most voted track (for advance confirmation message)
-  const tally = new Map<string, number>()
-  for (const v of currentVotes) tally.set(v.track_id, (tally.get(v.track_id) ?? 0) + 1)
+  const isFinal       = tiebreakActive && N === 2
+  const isSemifinalTb = tiebreakActive && N === 3
+  const isSemifinal   = !tiebreakActive && N === 3
+
+  const regularTally  = new Map<string, number>()
+  for (const v of currentVotes) regularTally.set(v.track_id, (regularTally.get(v.track_id) ?? 0) + 1)
+
+  const tiebreakTally = new Map<string, number>()
+  for (const v of tiebreakVotes) tiebreakTally.set(v.track_id, (tiebreakTally.get(v.track_id) ?? 0) + 1)
+
+  const hasVoted         = currentVotes.some(v => v.user_id === currentUserId)
+  const hasTiebreakVoted = tiebreakVotes.some(v => v.user_id === currentUserId)
+  const totalVotes       = currentVotes.length
+  const totalTbVotes     = tiebreakVotes.length
+
+  // Most-voted for AdvanceModal body text
   let mostVotedTrackId = survivingTracks[0]?.id ?? ''
-  let maxVotes = tally.get(mostVotedTrackId) ?? 0
+  let maxVotes = regularTally.get(mostVotedTrackId) ?? 0
   for (const t of survivingTracks) {
-    const c = tally.get(t.id) ?? 0
+    const c = regularTally.get(t.id) ?? 0
     if (c > maxVotes) { maxVotes = c; mostVotedTrackId = t.id }
   }
   const mostVotedTrackName = survivingTracks.find(t => t.id === mostVotedTrackId)?.track_name ?? ''
 
+  const phaseLabel = isFinal
+    ? '🏆 Grande Final'
+    : (isSemifinalTb || isSemifinal)
+    ? '⚔️ Semifinal'
+    : `Rodada ${activeEvent?.current_round ?? 1}`
+
+  const tracksToSemifinal = N - 3
+  const countdownText = !tiebreakActive && N > 3
+    ? `${tracksToSemifinal} eliminação${tracksToSemifinal !== 1 ? 'ões' : ''} até a semifinal`
+    : null
+
+  const advanceButtonLabel = isFinal
+    ? 'Revelar Campeão →'
+    : isSemifinalTb
+    ? 'Resolver Desempate →'
+    : 'Avançar Rodada →'
+
+  const advanceTitle = isFinal
+    ? 'Revelar Campeã?'
+    : isSemifinalTb
+    ? 'Resolver Desempate?'
+    : isSemifinal
+    ? 'Avançar para a Final?'
+    : 'Avançar Rodada?'
+
+  const advanceBody = isFinal
+    ? 'O resultado da Grande Final será revelado com base nos votos.'
+    : isSemifinalTb
+    ? 'O voto de desempate da semifinal será processado.'
+    : `"${mostVotedTrackName || 'sem votos ainda'}" será eliminada e a próxima rodada começa.`
+
+  const advanceConfirmLabel = isFinal
+    ? 'Revelar Campeão →'
+    : isSemifinalTb
+    ? 'Resolver Desempate →'
+    : 'Avançar Rodada →'
+
   return (
     <div className="space-y-6">
-      {/* Page title */}
       <div>
         <h1 className="text-xl font-bold text-white">🎵 Survivor Musical</h1>
         <p className="text-sm text-zinc-500 mt-0.5">Vote para eliminar a pior faixa de cada rodada</p>
       </div>
 
-      {/* ── Active event ── */}
       {activeEvent ? (
         <div className="space-y-4">
           {/* Album header */}
@@ -665,48 +740,96 @@ export default function SurvivorClient({
             <div className="min-w-0 flex-1">
               <p className="font-bold text-white text-lg truncate">{activeEvent.album_name}</p>
               <p className="text-sm text-zinc-400 truncate">{activeEvent.artist_name}</p>
-              <div className="flex items-center gap-3 mt-2">
-                <span className="text-xs bg-[#D4537E]/20 text-[#D4537E] rounded-full px-2.5 py-0.5 font-semibold">
-                  Rodada {activeEvent.current_round}
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                <span className={`text-xs rounded-full px-2.5 py-0.5 font-semibold ${
+                  isFinal
+                    ? 'bg-yellow-500/20 text-yellow-400'
+                    : (isSemifinalTb || isSemifinal)
+                    ? 'bg-[#7F77DD]/20 text-[#7F77DD]'
+                    : 'bg-[#D4537E]/20 text-[#D4537E]'
+                }`}>
+                  {phaseLabel}
                 </span>
                 <span className="text-xs text-zinc-500">
-                  {survivingTracks.length} faixa{survivingTracks.length !== 1 ? 's' : ''} restante{survivingTracks.length !== 1 ? 's' : ''}
+                  {N} faixa{N !== 1 ? 's' : ''} restante{N !== 1 ? 's' : ''}
                 </span>
+                {countdownText && (
+                  <span className="text-xs text-zinc-600">{countdownText}</span>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Voting prompt */}
-          {!hasVoted && currentUserId && (
-            <p className="text-sm text-zinc-400 text-center py-1">
-              Qual faixa você quer eliminar? Vote em "Eliminar"
-            </p>
+          {/* Phase banners */}
+          {isFinal && (
+            <div className="rounded-xl bg-yellow-500/10 border border-yellow-500/30 p-4 text-center space-y-1">
+              <p className="text-2xl">🏆</p>
+              <p className="font-bold text-yellow-400">Grande Final!</p>
+              <p className="text-sm text-zinc-400">Vote na sua faixa FAVORITA das duas finalistas</p>
+            </div>
           )}
-          {!currentUserId && (
+          {isSemifinalTb && (
+            <div className="rounded-xl bg-[#7F77DD]/10 border border-[#7F77DD]/30 p-4 text-center space-y-1">
+              <p className="text-2xl">⚔️</p>
+              <p className="font-bold text-[#7F77DD]">Desempate da Semifinal!</p>
+              <p className="text-sm text-zinc-400">Houve empate. Vote na faixa que deve ser eliminada agora</p>
+            </div>
+          )}
+
+          {/* Voting prompt */}
+          {currentUserId ? (
+            <>
+              {isFinal && !hasTiebreakVoted && (
+                <p className="text-sm text-zinc-400 text-center py-1">Vote na sua favorita para definir a campeã!</p>
+              )}
+              {isSemifinalTb && !hasTiebreakVoted && (
+                <p className="text-sm text-zinc-400 text-center py-1">Vote para desempatar a semifinal!</p>
+              )}
+              {!isFinal && !isSemifinalTb && !hasVoted && (
+                <p className="text-sm text-zinc-400 text-center py-1">Qual faixa você quer eliminar? Vote em "Eliminar"</p>
+              )}
+            </>
+          ) : (
             <p className="text-sm text-zinc-500 text-center py-1">Faça login para votar</p>
           )}
 
           {/* Surviving tracks */}
           <div className="space-y-2">
-            {survivingTracks.map(t => (
-              <TrackCard
-                key={t.id}
-                track={t}
-                voteCount={tally.get(t.id) ?? 0}
-                totalVotes={totalVotes}
-                voterProfiles={currentVotes.filter(v => v.track_id === t.id).map(v => v.profiles)}
-                isUserVote={userVoteId === t.id}
-                hasVoted={hasVoted}
-                onVote={() => handleVote(t.id)}
-                onPreview={() => togglePreview(t)}
-                isPlaying={playingId === t.id}
-                isLoadingPreview={loadingPreviewId === t.id}
-                votingId={votingId}
-              />
-            ))}
+            {survivingTracks.map(t => {
+              const isActiveTiebreak = isFinal || isSemifinalTb
+              const inTiebreak  = tiebreakIds.includes(t.id)
+              const isDimmed    = isActiveTiebreak && !inTiebreak
+              const vCount      = isActiveTiebreak ? (tiebreakTally.get(t.id) ?? 0) : (regularTally.get(t.id) ?? 0)
+              const vTotal      = isActiveTiebreak ? totalTbVotes : totalVotes
+              const profiles    = isActiveTiebreak
+                ? tiebreakVotes.filter(v => v.track_id === t.id).map(v => v.profiles)
+                : currentVotes.filter(v => v.track_id === t.id).map(v => v.profiles)
+              const isMyVote    = isActiveTiebreak ? userTiebreakVoteId === t.id : userVoteId === t.id
+              const myVoted     = isActiveTiebreak ? hasTiebreakVoted : hasVoted
+              const voteLabel   = isFinal ? 'Votar' : 'Eliminar'
+
+              return (
+                <TrackCard
+                  key={t.id}
+                  track={t}
+                  voteCount={vCount}
+                  totalVotes={vTotal}
+                  voterProfiles={profiles}
+                  isUserVote={isMyVote}
+                  hasVoted={myVoted}
+                  voteLabel={voteLabel}
+                  isDimmed={isDimmed}
+                  onVote={() => handleVote(t.id, isActiveTiebreak)}
+                  onPreview={() => togglePreview(t)}
+                  isPlaying={playingId === t.id}
+                  isLoadingPreview={loadingPreviewId === t.id}
+                  votingId={isActiveTiebreak ? votingTiebreakId : votingId}
+                />
+              )
+            })}
           </div>
 
-          {/* Eliminated tracks (collapsed) */}
+          {/* Eliminated tracks */}
           {eliminatedTracks.length > 0 && (
             <details className="group">
               <summary className="text-xs text-zinc-500 cursor-pointer hover:text-zinc-300 select-none">
@@ -724,22 +847,23 @@ export default function SurvivorClient({
             </details>
           )}
 
-          {/* Owner controls */}
+          {/* Owner advance button */}
           {isOwner && (
             <div className="pt-2">
               <button
                 onClick={() => setShowAdvance(true)}
                 className="w-full rounded-xl bg-[#7F77DD] py-3 text-sm font-semibold text-white hover:bg-[#7F77DD]/80 transition-colors"
               >
-                Avançar Rodada →
+                {advanceButtonLabel}
               </button>
             </div>
           )}
 
           {showAdvance && (
             <AdvanceModal
-              nextRound={activeEvent.current_round + 1}
-              mostVotedTrack={mostVotedTrackName || 'sem votos ainda'}
+              title={advanceTitle}
+              body={advanceBody}
+              confirmLabel={advanceConfirmLabel}
               onConfirm={handleAdvance}
               onCancel={() => setShowAdvance(false)}
               loading={advancing}
@@ -747,10 +871,8 @@ export default function SurvivorClient({
           )}
         </div>
       ) : finishedEvent ? (
-        /* ── Most recent finished event results ── */
         <FinishedResults event={finishedEvent} tracks={finishedTracks} />
       ) : (
-        /* ── No event ── */
         <div className="rounded-xl bg-white/5 p-8 text-center space-y-3">
           <p className="text-2xl">🎵</p>
           <p className="text-zinc-400">Nenhum Survivor ativo no momento</p>
@@ -765,7 +887,6 @@ export default function SurvivorClient({
         </div>
       )}
 
-      {/* Create button for owner when event is finished (not active) */}
       {!activeEvent && finishedEvent && isOwner && (
         <div>
           <button
@@ -777,10 +898,8 @@ export default function SurvivorClient({
         </div>
       )}
 
-      {/* History */}
       <EventHistory pastEvents={pastEvents} />
 
-      {/* Create modal */}
       {showCreate && (
         <CreateEventModal
           communityId={communityId}
@@ -792,7 +911,6 @@ export default function SurvivorClient({
         />
       )}
 
-      {/* Toast */}
       {toast && (
         <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 whitespace-nowrap rounded-xl bg-zinc-800 px-4 py-2 text-sm text-white shadow-xl">
           {toast}

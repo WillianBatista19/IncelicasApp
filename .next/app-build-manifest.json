@@ -1,9 +1,9 @@
 {
   "pages": {
-    "/(app)/communities/[slug]/page": [
+    "/(app)/communities/musica/survivor/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(app)/communities/[slug]/page.js"
+      "static/chunks/app/(app)/communities/musica/survivor/page.js"
     ],
     "/(app)/layout": [
       "static/chunks/webpack.js",
@@ -15,31 +15,6 @@
       "static/chunks/main-app.js",
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
-    ],
-    "/(app)/communities/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(app)/communities/page.js"
-    ],
-    "/(app)/jogar/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(app)/jogar/page.js"
-    ],
-    "/(app)/jogar/admin/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(app)/jogar/admin/page.js"
-    ],
-    "/(app)/feed/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(app)/feed/page.js"
-    ],
-    "/changelog/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/changelog/page.js"
     ]
   }
 }

@@ -20,9 +20,10 @@ interface CreateEventInput {
 }
 
 export async function castVote(
-  eventId: string,
-  trackId: string,
-  round: number,
+  eventId:    string,
+  trackId:    string,
+  round:      number,
+  isTiebreak: boolean = false,
 ): Promise<{ error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -31,13 +32,15 @@ export async function castVote(
   const { error } = await supabase
     .from('survivor_votes')
     .upsert(
-      { event_id: eventId, track_id: trackId, user_id: user.id, round },
-      { onConflict: 'event_id,user_id,round' },
+      { event_id: eventId, track_id: trackId, user_id: user.id, round, is_tiebreak: isTiebreak },
+      { onConflict: 'event_id,user_id,round,is_tiebreak' },
     )
 
   if (error) {
     if (error.code === '42501' || error.code === '23505') {
-      return { error: 'Você já votou nessa rodada. Aguarde a próxima!' }
+      return { error: isTiebreak
+        ? 'Você já votou no desempate!'
+        : 'Você já votou nessa rodada. Aguarde a próxima!' }
     }
     return { error: error.message }
   }
@@ -46,73 +49,197 @@ export async function castVote(
   return {}
 }
 
-export async function advanceRound(eventId: string) {
+export async function advanceRound(eventId: string): Promise<{ message?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Login necessário')
 
-  const { data: event } = await supabase
-    .from('survivor_events')
-    .select('community_id, current_round, status')
-    .eq('id', eventId)
-    .single()
-  if (!event) throw new Error('Evento não encontrado')
-  if (event.status !== 'active') throw new Error('Evento não está ativo')
+  console.log('[advanceRound] eventId:', eventId, '| userId:', user.id)
 
-  const { data: member } = await supabase
+  // Query the event — separate error from data so we can diagnose RLS/column issues
+  const { data: event, error: eventError } = await supabase
+    .from('survivor_events')
+    .select('community_id, current_round, status, album_name, tiebreak_active, tiebreak_track_ids, tiebreak_round')
+    .eq('id', eventId)
+    .maybeSingle()
+
+  console.log('[advanceRound] event query →', { event, error: eventError })
+
+  if (eventError) throw new Error(`Erro ao buscar evento: ${eventError.message}`)
+  if (!event) throw new Error('Evento não encontrado (verifique as permissões RLS)')
+  if (event.status !== 'active') throw new Error(`Evento não está ativo (status: ${event.status})`)
+
+  const { data: memberRow } = await supabase
     .from('community_members')
     .select('role')
     .eq('community_id', event.community_id)
     .eq('user_id', user.id)
     .maybeSingle()
-  if (member?.role !== 'owner') throw new Error('Sem permissão')
+  if (memberRow?.role !== 'owner') throw new Error('Sem permissão')
 
   const { data: surviving } = await supabase
     .from('survivor_tracks')
-    .select('id')
+    .select('id, track_name, track_number')
     .eq('event_id', eventId)
     .is('eliminated_at_round', null)
     .order('track_number')
   if (!surviving || surviving.length < 2) throw new Error('Faixas insuficientes para avançar')
 
-  const { data: votes } = await supabase
+  const N = surviving.length
+
+  // ─── helper: throw on Supabase update error ──────────────────────────────
+  async function updateTracks(ids: string[], patch: Record<string, unknown>) {
+    const { error } = await supabase.from('survivor_tracks').update(patch).in('id', ids)
+    console.log('[advanceRound] updateTracks', ids, patch, '→ error:', error)
+    if (error) throw new Error(`Erro ao atualizar faixas: ${error.message}`)
+  }
+  async function updateEvent(patch: Record<string, unknown>) {
+    const { error } = await supabase.from('survivor_events').update(patch).eq('id', eventId)
+    console.log('[advanceRound] updateEvent', patch, '→ error:', error)
+    if (error) throw new Error(`Erro ao atualizar evento: ${error.message}`)
+  }
+
+  // ─── CASE A: Resolve final tiebreak (2 tracks, tiebreak_active) ────────────
+  if (event.tiebreak_active && N === 2) {
+    const { data: tbVotes } = await supabase
+      .from('survivor_votes')
+      .select('track_id')
+      .eq('event_id', eventId)
+      .eq('round', event.tiebreak_round)
+      .eq('is_tiebreak', true)
+
+    const tally = new Map<string, number>()
+    for (const v of tbVotes ?? []) tally.set(v.track_id, (tally.get(v.track_id) ?? 0) + 1)
+
+    const [t1, t2] = surviving
+    const c1 = tally.get(t1.id) ?? 0
+    const c2 = tally.get(t2.id) ?? 0
+
+    console.log('[advanceRound] CASE A final tiebreak | tally:', Object.fromEntries(tally), c1, 'vs', c2)
+
+    if (c1 === c2) {
+      await updateTracks([t1.id, t2.id], { final_position: 1 })
+      await updateEvent({ status: 'finished', tiebreak_active: false })
+      revalidatePath('/communities/musica/survivor')
+      return { message: `🏆🏆 EMPATE HISTÓRICO! "${t1.track_name}" e "${t2.track_name}" são co-campeãs!` }
+    }
+
+    const winner = c1 > c2 ? t1 : t2
+    const loser  = c1 > c2 ? t2 : t1
+    await updateTracks([winner.id], { final_position: 1 })
+    await updateTracks([loser.id],  { eliminated_at_round: event.tiebreak_round, final_position: 2 })
+    await updateEvent({ status: 'finished', tiebreak_active: false })
+    revalidatePath('/communities/musica/survivor')
+    return { message: `🏆 "${winner.track_name}" é a campeã do Survivor de ${event.album_name}!` }
+  }
+
+  // ─── CASE B: Resolve semifinal tiebreak (3 tracks, tiebreak_active) ────────
+  if (event.tiebreak_active && N === 3) {
+    const tieIds = event.tiebreak_track_ids ?? []
+    const { data: tbVotes } = await supabase
+      .from('survivor_votes')
+      .select('track_id')
+      .eq('event_id', eventId)
+      .eq('round', event.tiebreak_round)
+      .eq('is_tiebreak', true)
+
+    const tally = new Map<string, number>()
+    for (const v of tbVotes ?? []) {
+      if (tieIds.includes(v.track_id)) {
+        tally.set(v.track_id, (tally.get(v.track_id) ?? 0) + 1)
+      }
+    }
+
+    const tieTracks = surviving.filter(t => tieIds.includes(t.id))
+    const maxTb     = tieTracks.reduce((m, t) => Math.max(m, tally.get(t.id) ?? 0), 0)
+    const stillTied = tieTracks.filter(t => (tally.get(t.id) ?? 0) === maxTb)
+    const toElim    = stillTied.length > 1
+      ? stillTied.reduce((a, b) => a.track_number > b.track_number ? a : b)
+      : (stillTied[0] ?? tieTracks[0])
+
+    console.log('[advanceRound] CASE B semifinal tiebreak | tally:', Object.fromEntries(tally), '| elim:', toElim?.track_name)
+
+    const newRound  = event.current_round + 1
+    const remaining = surviving.filter(t => t.id !== toElim.id)
+
+    await updateTracks([toElim.id], { eliminated_at_round: event.current_round, final_position: 3 })
+    await updateEvent({
+      current_round:      newRound,
+      tiebreak_active:    true,
+      tiebreak_track_ids: remaining.map(t => t.id),
+      tiebreak_round:     newRound,
+    })
+    revalidatePath('/communities/musica/survivor')
+    return {
+      message: stillTied.length > 1
+        ? `💀 Empate de novo! "${toElim.track_name}" eliminada pelo número da faixa.`
+        : `💀 "${toElim.track_name}" eliminada no desempate!`,
+    }
+  }
+
+  // ─── CASE C: Normal advance (no tiebreak active) ───────────────────────────
+  const { data: regularVotes } = await supabase
     .from('survivor_votes')
     .select('track_id')
     .eq('event_id', eventId)
     .eq('round', event.current_round)
+    .eq('is_tiebreak', false)
 
   const tally = new Map<string, number>()
-  for (const v of votes ?? []) {
-    tally.set(v.track_id, (tally.get(v.track_id) ?? 0) + 1)
+  for (const v of regularVotes ?? []) tally.set(v.track_id, (tally.get(v.track_id) ?? 0) + 1)
+
+  const maxVotes = Math.max(0, ...surviving.map(t => tally.get(t.id) ?? 0))
+  let topTracks  = surviving.filter(t => (tally.get(t.id) ?? 0) === maxVotes)
+
+  // No votes: fall back to last track by track_number
+  if (maxVotes === 0) topTracks = [surviving[surviving.length - 1]]
+
+  console.log('[advanceRound] CASE C | votes:', regularVotes?.length ?? 0, '| tally:', Object.fromEntries(tally), '| topTracks:', topTracks.map(t => t.track_name))
+
+  // Semifinal tie → activate tiebreak instead of eliminating
+  if (N === 3 && topTracks.length > 1) {
+    await updateEvent({
+      tiebreak_active:    true,
+      tiebreak_track_ids: topTracks.map(t => t.id),
+      tiebreak_round:     event.current_round,
+    })
+    revalidatePath('/communities/musica/survivor')
+    return { message: `⚔️ Empate! Desempate ativado entre ${topTracks.length} faixas!` }
   }
 
-  // Most-voted track; ties broken by order in surviving (ascending track_number)
-  let toEliminate = surviving[0].id
-  let max = tally.get(toEliminate) ?? 0
-  for (const t of surviving) {
-    const c = tally.get(t.id) ?? 0
-    if (c > max) { max = c; toEliminate = t.id }
-  }
+  // Safeguard: never eliminate every remaining track
+  if (topTracks.length >= N) topTracks = [surviving[surviving.length - 1]]
 
-  const newCount = surviving.length - 1
+  const eliminatedIds = topTracks.map(t => t.id)
+  const newCount = N - topTracks.length
+  const newRound = event.current_round + 1
 
-  await supabase
-    .from('survivor_tracks')
-    .update({ eliminated_at_round: event.current_round, final_position: newCount + 1 })
-    .eq('id', toEliminate)
+  await updateTracks(eliminatedIds, { eliminated_at_round: event.current_round, final_position: newCount + 1 })
 
   if (newCount === 1) {
-    const winnerId = surviving.find(t => t.id !== toEliminate)!.id
-    await supabase.from('survivor_tracks').update({ final_position: 1 }).eq('id', winnerId)
-    await supabase.from('survivor_events').update({ status: 'finished' }).eq('id', eventId)
+    const winner = surviving.find(t => !eliminatedIds.includes(t.id))!
+    await updateTracks([winner.id], { final_position: 1 })
+    await updateEvent({ status: 'finished' })
+    revalidatePath('/communities/musica/survivor')
+    return { message: `🏆 "${winner.track_name}" é a campeã!` }
+  }
+
+  if (newCount === 2) {
+    const remaining = surviving.filter(t => !eliminatedIds.includes(t.id))
+    await updateEvent({
+      current_round:      newRound,
+      tiebreak_active:    true,
+      tiebreak_track_ids: remaining.map(t => t.id),
+      tiebreak_round:     newRound,
+    })
   } else {
-    await supabase
-      .from('survivor_events')
-      .update({ current_round: event.current_round + 1 })
-      .eq('id', eventId)
+    await updateEvent({ current_round: newRound })
   }
 
   revalidatePath('/communities/musica/survivor')
+  return topTracks.length > 1
+    ? { message: `💥 Empate! ${topTracks.length} faixas eliminadas!` }
+    : {}
 }
 
 export async function createSurvivorEvent(input: CreateEventInput) {
