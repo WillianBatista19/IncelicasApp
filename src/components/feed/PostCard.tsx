@@ -1,6 +1,7 @@
 'use client'
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useModalLock } from '@/hooks/useModalLock'
 import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -568,6 +569,7 @@ function PostText({ text, className }: { text: string; className?: string }) {
 // ─── Fullscreen image viewer ──────────────────────────────────────────────────
 
 function FullscreenImage({ src, onClose }: { src: string; onClose: () => void }) {
+  useModalLock(true)
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"

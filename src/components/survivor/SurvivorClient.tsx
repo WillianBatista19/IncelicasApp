@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, useTransition } from 'react'
+import { useModalLock } from '@/hooks/useModalLock'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { castVote, advanceRound, createSurvivorEvent } from '@/app/(app)/communities/musica/survivor/actions'
@@ -80,6 +81,8 @@ function CreateEventModal({
   onClose: () => void
   onCreated: () => void
 }) {
+  useModalLock(true)
+
   const [query, setQuery]               = useState('')
   const [results, setResults]           = useState<SpotifyAlbum[]>([])
   const [selected, setSelected]         = useState<SpotifyAlbum | null>(null)
@@ -318,6 +321,7 @@ function AdvanceModal({
   onCancel: () => void
   loading: boolean
 }) {
+  useModalLock(true)
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
       <div className="w-full max-w-sm rounded-xl bg-zinc-900 border border-white/10 p-5 space-y-4">
@@ -425,18 +429,20 @@ function TrackCard({
   onVote,
   onPreview,
   isPlaying,
+  isLoadingPreview,
   votingId,
 }: {
-  track:         SurvivorTrack
-  voteCount:     number
-  totalVotes:    number
-  voterProfiles: VoteWithProfile['profiles'][]
-  isUserVote:    boolean
-  hasVoted:      boolean
-  onVote:        () => void
-  onPreview:     () => void
-  isPlaying:     boolean
-  votingId:      string | null
+  track:            SurvivorTrack
+  voteCount:        number
+  totalVotes:       number
+  voterProfiles:    VoteWithProfile['profiles'][]
+  isUserVote:       boolean
+  hasVoted:         boolean
+  onVote:           () => void
+  onPreview:        () => void
+  isPlaying:        boolean
+  isLoadingPreview: boolean
+  votingId:         string | null
 }) {
   const pct = totalVotes > 0 ? Math.round(voteCount / totalVotes * 100) : 0
   const isVotingThis = votingId === track.id
@@ -452,10 +458,14 @@ function TrackCard({
         {track.preview_url && (
           <button
             onClick={onPreview}
-            className="shrink-0 text-[#1D9E75] hover:text-[#1D9E75]/80 p-1"
+            disabled={isLoadingPreview}
+            className="shrink-0 text-[#1D9E75] hover:text-[#1D9E75]/80 p-1 disabled:opacity-60"
             aria-label={isPlaying ? 'Pausar' : 'Ouvir trecho'}
           >
-            {isPlaying ? <PauseIcon className="w-4 h-4" /> : <PlayIcon className="w-4 h-4" />}
+            {isLoadingPreview
+              ? <span className="w-4 h-4 block animate-spin rounded-full border-2 border-[#1D9E75] border-t-transparent" />
+              : isPlaying ? <PauseIcon className="w-4 h-4" /> : <PlayIcon className="w-4 h-4" />
+            }
           </button>
         )}
 
@@ -550,24 +560,33 @@ export default function SurvivorClient({
   const [advancing, setAdvancing]       = useState(false)
   const [showCreate, setShowCreate]     = useState(false)
   const [toast, setToast]               = useState<string | null>(null)
-  const [playingId, setPlayingId]       = useState<string | null>(null)
-  const audioRef                        = useRef<HTMLAudioElement | null>(null)
+  const [playingId, setPlayingId]               = useState<string | null>(null)
+  const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null)
+  const audioRef                                = useRef<HTMLAudioElement | null>(null)
 
   function showToast(msg: string) {
     setToast(msg)
     setTimeout(() => setToast(null), 2500)
   }
 
-  function togglePreview(track: SurvivorTrack) {
-    if (!track.preview_url) return
+  async function togglePreview(track: SurvivorTrack) {
+    if (loadingPreviewId === track.id) return
     if (playingId === track.id) {
       audioRef.current?.pause()
       setPlayingId(null)
       return
     }
     audioRef.current?.pause()
-    const audio = new Audio(track.preview_url)
-    audio.play()
+    setPlayingId(null)
+    setLoadingPreviewId(track.id)
+    const url = await fetchDeezerPreview(track.track_name, activeEvent?.artist_name ?? '')
+    setLoadingPreviewId(null)
+    if (!url) {
+      showToast('Preview não disponível para essa faixa.')
+      return
+    }
+    const audio = new Audio(url)
+    audio.play().catch(() => showToast('Não foi possível reproduzir o preview.'))
     audio.onended = () => setPlayingId(null)
     audioRef.current = audio
     setPlayingId(track.id)
@@ -681,6 +700,7 @@ export default function SurvivorClient({
                 onVote={() => handleVote(t.id)}
                 onPreview={() => togglePreview(t)}
                 isPlaying={playingId === t.id}
+                isLoadingPreview={loadingPreviewId === t.id}
                 votingId={votingId}
               />
             ))}

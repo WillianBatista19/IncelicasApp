@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Avatar from '@/components/Avatar'
+import { useModalLock } from '@/hooks/useModalLock'
 import {
   addGroupMember,
   removeGroupMember,
@@ -51,11 +52,7 @@ export default function GroupMembersModal({
   const supabase  = createClient()
   const isCreator = createdBy === currentUserId
 
-  // Lock body scroll while open
-  useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = '' }
-  }, [])
+  useModalLock(true)
 
   // avatar
   const fileRef        = useRef<HTMLInputElement>(null)

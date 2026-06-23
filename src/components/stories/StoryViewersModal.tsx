@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Avatar from '@/components/Avatar'
+import { useModalLock } from '@/hooks/useModalLock'
 
 type Viewer = {
   display_name: string | null
@@ -21,6 +22,8 @@ export default function StoryViewersModal({ storyId, storyOwnerId, onClose }: Pr
   const supabase              = useMemo(() => createClient(), [])
   const [viewers, setViewers] = useState<Viewer[]>([])
   const [loading, setLoading] = useState(true)
+
+  useModalLock(true)
 
   useEffect(() => {
     async function load() {

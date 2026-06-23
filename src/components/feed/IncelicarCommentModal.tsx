@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useModalLock } from '@/hooks/useModalLock'
 import Avatar from '@/components/Avatar'
 import CategoryBadge from '@/components/feed/CategoryBadge'
 import type { OriginalPost } from '@/types'
@@ -33,17 +34,13 @@ export default function IncelicarCommentModal({
 
   const origAuthor = original.profiles.display_name || original.profiles.username
 
+  useModalLock(true)
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
-
-  useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
-  }, [])
 
   async function submit() {
     if (!canSubmit) return

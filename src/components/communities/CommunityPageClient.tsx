@@ -159,8 +159,8 @@ export default function CommunityPageClient({
 
       {tab === 'posts' && (
         <div className="space-y-4">
-          {canPost && (
-            <CommunityPostComposer communityId={community.id} onPost={handleNewPost} />
+          {canPost && currentUserId && (
+            <CommunityPostComposer communityId={community.id} currentUserId={currentUserId} onPost={handleNewPost} />
           )}
           {posts.length === 0 ? (
             <p className="text-zinc-500 text-sm text-center py-10">

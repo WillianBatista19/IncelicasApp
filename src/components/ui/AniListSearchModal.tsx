@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useModalLock } from '@/hooks/useModalLock'
 
 export type AniListResult = {
   id:       number
@@ -43,6 +44,8 @@ export default function AniListSearchModal({ onSelect, onClose }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cacheRef = useRef<Map<string, AniListResult[]>>(new Map())
+
+  useModalLock(true)
 
   useEffect(() => {
     inputRef.current?.focus()

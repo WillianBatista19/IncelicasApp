@@ -12,12 +12,13 @@ const VIBES: { type: VibeType; emoji: string; label: string }[] = [
 ]
 
 interface Props {
-  postId:        string
-  initialVibes:  CommunityVibe[]
-  currentUserId: string | null
+  postId:         string
+  initialVibes:   CommunityVibe[]
+  currentUserId:  string | null
+  onCountClick?:  () => void
 }
 
-export default function CommunityVibeCheck({ postId, initialVibes, currentUserId }: Props) {
+export default function CommunityVibeCheck({ postId, initialVibes, currentUserId, onCountClick }: Props) {
   const { counts, myVibe, pending, react, total } = useCommunityVibeCheck(postId, initialVibes, currentUserId)
 
   return (
@@ -42,7 +43,13 @@ export default function CommunityVibeCheck({ postId, initialVibes, currentUserId
         )
       })}
       {total > 0 && (
-        <span className="flex items-center text-xs text-zinc-500 ml-1">{total} vibes</span>
+        <button
+          type="button"
+          onClick={onCountClick}
+          className="flex items-center text-xs text-zinc-500 ml-1 hover:text-zinc-300 transition-colors"
+        >
+          {total} vibes
+        </button>
       )}
     </div>
   )

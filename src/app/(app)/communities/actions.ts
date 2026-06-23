@@ -85,6 +85,7 @@ export async function createCommunityPost(
   communityId: string,
   content:     string,
   imageUrl?:   string | null,
+  mediaUrl?:   string | null,
 ) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -92,7 +93,7 @@ export async function createCommunityPost(
 
   const { data: post, error } = await supabase
     .from('community_posts')
-    .insert({ community_id: communityId, user_id: user.id, content, image_url: imageUrl || null })
+    .insert({ community_id: communityId, user_id: user.id, content, image_url: imageUrl || null, media_url: mediaUrl || null })
     .select('id')
     .single()
 

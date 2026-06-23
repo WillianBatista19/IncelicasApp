@@ -5,7 +5,10 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { CommunityPost } from '@/types'
+import Avatar from '@/components/Avatar'
+import MediaEmbed from '@/components/feed/MediaEmbed'
 import CommunityVibeCheck from './CommunityVibeCheck'
+import CommunityVibeListModal from './CommunityVibeListModal'
 import CommunityComments from './CommunityComments'
 import { deleteCommunityPost } from '@/app/(app)/communities/actions'
 
@@ -18,13 +21,14 @@ interface Props {
 export default function CommunityPostCard({ post, currentUserId, isOwnerOrMod }: Props) {
   const supabase = useMemo(() => createClient(), [])
 
-  const [showComments,  setShowComments]  = useState(false)
-  const [deleted,       setDeleted]       = useState(false)
-  const [showMenu,      setShowMenu]      = useState(false)
-  const [editing,       setEditing]       = useState(false)
-  const [editContent,   setEditContent]   = useState(post.content)
-  const [localContent,  setLocalContent]  = useState(post.content)
-  const [editSaving,    setEditSaving]    = useState(false)
+  const [showComments,   setShowComments]   = useState(false)
+  const [showVibeModal,  setShowVibeModal]  = useState(false)
+  const [deleted,        setDeleted]        = useState(false)
+  const [showMenu,       setShowMenu]       = useState(false)
+  const [editing,        setEditing]        = useState(false)
+  const [editContent,    setEditContent]    = useState(post.content)
+  const [localContent,   setLocalContent]   = useState(post.content)
+  const [editSaving,     setEditSaving]     = useState(false)
 
   if (deleted) return null
 
@@ -58,18 +62,7 @@ export default function CommunityPostCard({ post, currentUserId, isOwnerOrMod }:
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
           <Link href={`/profile/${profile.username}`}>
-            {profile.avatar_url ? (
-              <Image
-                src={profile.avatar_url}
-                alt={profile.display_name ?? profile.username}
-                width={36} height={36}
-                className="rounded-full object-cover"
-              />
-            ) : (
-              <div className="w-9 h-9 rounded-full bg-[#7F77DD] flex items-center justify-center text-white text-sm">
-                {(profile.display_name ?? profile.username)[0].toUpperCase()}
-              </div>
-            )}
+            <Avatar src={profile.avatar_url} name={profile.display_name ?? profile.username} size="sm" />
           </Link>
           <div>
             <Link href={`/profile/${profile.username}`} className="text-sm font-semibold text-white hover:underline">
@@ -160,11 +153,16 @@ export default function CommunityPostCard({ post, currentUserId, isOwnerOrMod }:
         />
       )}
 
+      {post.media_url && (
+        <MediaEmbed spotifyUrl={post.media_url} youtubeUrl={post.media_url} />
+      )}
+
       <div className="flex items-center gap-4">
         <CommunityVibeCheck
           postId={post.id}
           initialVibes={post.community_post_vibes}
           currentUserId={currentUserId}
+          onCountClick={() => setShowVibeModal(true)}
         />
         <button
           onClick={() => setShowComments(v => !v)}
@@ -178,6 +176,13 @@ export default function CommunityPostCard({ post, currentUserId, isOwnerOrMod }:
         <CommunityComments
           postId={post.id}
           currentUserId={currentUserId}
+        />
+      )}
+
+      {showVibeModal && (
+        <CommunityVibeListModal
+          postId={post.id}
+          onClose={() => setShowVibeModal(false)}
         />
       )}
     </article>

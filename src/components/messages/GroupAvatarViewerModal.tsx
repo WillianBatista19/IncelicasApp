@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { updateGroupAvatar } from '@/app/(app)/messages/actions'
+import { useModalLock } from '@/hooks/useModalLock'
 
 type Props = {
   src:             string | null
@@ -28,11 +29,7 @@ export default function GroupAvatarViewerModal({
   const [error,     setError]     = useState<string | null>(null)
   const [localSrc,  setLocalSrc]  = useState(src)
 
-  // Lock body scroll while open
-  useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = '' }
-  }, [])
+  useModalLock(true)
 
   // Escape to close
   useEffect(() => {

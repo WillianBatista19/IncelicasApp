@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { useModalLock } from '@/hooks/useModalLock'
 
 interface Props {
   src:     string
@@ -9,10 +10,7 @@ interface Props {
 }
 
 export default function CommunityAvatarModal({ src, name, onClose }: Props) {
-  useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = '' }
-  }, [])
+  useModalLock(true)
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }

@@ -23,12 +23,12 @@ const EMPTY_MARKERS: Record<MarkerField, string | null> = {
 }
 
 interface SpotifyAlbumResult {
-  id:           string
-  name:         string
-  artists:      { name: string }[]
-  images:       { url: string }[]
-  release_date: string
-  total_tracks: number
+  id:          string
+  name:        string
+  artist:      string
+  cover:       string | null
+  year:        string | null
+  totalTracks: number
 }
 
 interface SpotifyTrack {
@@ -116,7 +116,7 @@ export default function AlbumRatingClient({
       try {
         const res  = await fetch(`/api/spotify/albums?action=search&q=${encodeURIComponent(query)}`)
         const json = await res.json()
-        setResults(json.albums?.items ?? [])
+        setResults(json.albums ?? [])
       } catch { setResults([]) }
       setSearching(false)
     }, 400)
@@ -143,10 +143,10 @@ export default function AlbumRatingClient({
       setSelectedAlbum({
         id:          item.id,
         name:        item.name,
-        artist:      item.artists.map((a: { name: string }) => a.name).join(', '),
-        coverUrl:    item.images[0]?.url ?? null,
-        year:        item.release_date?.slice(0, 4) ?? '',
-        totalTracks: item.total_tracks,
+        artist:      item.artist,
+        coverUrl:    item.cover ?? null,
+        year:        item.year ?? '',
+        totalTracks: item.totalTracks,
         tracks,
       })
 
@@ -439,8 +439,8 @@ export default function AlbumRatingClient({
               onClick={() => selectAlbum(item)}
               className="w-full flex items-center gap-3 rounded-xl bg-white/5 p-3 text-left hover:bg-white/10 transition-colors"
             >
-              {item.images[0]?.url ? (
-                <Image src={item.images[0].url} alt={item.name} width={48} height={48}
+              {item.cover ? (
+                <Image src={item.cover} alt={item.name} width={48} height={48}
                   className="rounded-lg shrink-0 object-cover"
                 />
               ) : (
@@ -448,8 +448,8 @@ export default function AlbumRatingClient({
               )}
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-white truncate">{item.name}</p>
-                <p className="text-xs text-zinc-400">{item.artists.map((a: { name: string }) => a.name).join(', ')}</p>
-                <p className="text-xs text-zinc-600">{item.release_date?.slice(0, 4)} · {item.total_tracks} faixas</p>
+                <p className="text-xs text-zinc-400">{item.artist}</p>
+                <p className="text-xs text-zinc-600">{item.year} · {item.totalTracks} faixas</p>
               </div>
               <span className="text-xs text-zinc-600 shrink-0">→</span>
             </button>

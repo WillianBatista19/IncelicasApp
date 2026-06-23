@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
+import Avatar from '@/components/Avatar'
 import { createCommunityComment, deleteCommunityComment } from '@/app/(app)/communities/actions'
 
 interface CommunityComment {
@@ -54,18 +54,11 @@ export default function CommunityComments({ postId, currentUserId, initialCommen
       {comments.map(c => (
         <div key={c.id} className="flex gap-2">
           <Link href={`/profile/${c.profiles.username}`}>
-            {c.profiles.avatar_url ? (
-              <Image
-                src={c.profiles.avatar_url}
-                alt={c.profiles.display_name ?? c.profiles.username}
-                width={28} height={28}
-                className="rounded-full object-cover shrink-0"
-              />
-            ) : (
-              <div className="w-7 h-7 rounded-full bg-[#7F77DD] flex items-center justify-center text-white text-xs shrink-0">
-                {(c.profiles.display_name ?? c.profiles.username)[0].toUpperCase()}
-              </div>
-            )}
+            <Avatar
+              src={c.profiles.avatar_url}
+              name={c.profiles.display_name ?? c.profiles.username}
+              size="sm"
+            />
           </Link>
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-1">

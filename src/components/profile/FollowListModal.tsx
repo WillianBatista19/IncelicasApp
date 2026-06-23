@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useModalLock } from '@/hooks/useModalLock'
 import { createClient } from '@/lib/supabase/client'
 import Avatar from '@/components/Avatar'
 import FollowButton from '@/components/profile/FollowButton'
@@ -43,11 +44,7 @@ export default function FollowListModal({
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
-  }, [])
+  useModalLock(true)
 
   useEffect(() => {
     async function load() {

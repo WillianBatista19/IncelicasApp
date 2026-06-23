@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useModalLock } from '@/hooks/useModalLock'
 
 export type MediaResult = {
   id:       string
@@ -26,6 +27,8 @@ export default function MediaSearchModal({ type, onSelect, onClose }: Props) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Cache: query string → results, max 10 entries (insertion-order eviction)
   const cacheRef = useRef<Map<string, MediaResult[]>>(new Map())
+
+  useModalLock(true)
 
   useEffect(() => {
     inputRef.current?.focus()

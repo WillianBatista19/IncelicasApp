@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useModalLock } from '@/hooks/useModalLock'
 import { createClient } from '@/lib/supabase/client'
 import Avatar from '@/components/Avatar'
 import { createGroupConversation } from '@/app/(app)/messages/actions'
@@ -16,6 +17,8 @@ type Profile = {
 export default function NewGroupModal({ onClose }: { onClose: () => void }) {
   const router   = useRouter()
   const supabase = createClient()
+
+  useModalLock(true)
 
   const [groupName,  setGroupName]  = useState('')
   const [query,      setQuery]      = useState('')

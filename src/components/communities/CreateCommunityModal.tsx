@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createCommunity } from '@/app/(app)/communities/actions'
+import { useModalLock } from '@/hooks/useModalLock'
 
 interface Props {
   onClose: () => void
@@ -10,6 +11,9 @@ interface Props {
 
 export default function CreateCommunityModal({ onClose }: Props) {
   const router = useRouter()
+
+  useModalLock(true)
+
   const [name, setName]               = useState('')
   const [description, setDescription] = useState('')
   const [permission, setPermission]   = useState('all')

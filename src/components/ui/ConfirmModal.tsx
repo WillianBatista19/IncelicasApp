@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { useModalLock } from '@/hooks/useModalLock'
 
 type Props = {
   title?:       string
@@ -13,6 +14,8 @@ type Props = {
 }
 
 export default function ConfirmModal({ title, message, confirmLabel, onConfirm, onCancel, loading = false, variant = 'default' }: Props) {
+  useModalLock(true)
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onCancel()

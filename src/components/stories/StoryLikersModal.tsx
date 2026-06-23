@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Avatar from '@/components/Avatar'
+import { useModalLock } from '@/hooks/useModalLock'
 
 type Liker = {
   display_name: string | null
@@ -20,6 +21,8 @@ export default function StoryLikersModal({ storyId, onClose }: Props) {
   const supabase              = useMemo(() => createClient(), [])
   const [likers,  setLikers]  = useState<Liker[]>([])
   const [loading, setLoading] = useState(true)
+
+  useModalLock(true)
 
   useEffect(() => {
     supabase

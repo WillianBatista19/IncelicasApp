@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { useModalLock } from '@/hooks/useModalLock'
 import Avatar from '@/components/Avatar'
 import type { VibeType } from '@/types'
 
@@ -49,6 +50,8 @@ export default function VibeListModal({ postId, onClose }: Props) {
   const [vibes,    setVibes]  = useState<VibeUser[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setTab]   = useState<VibeType | 'all'>('all')
+
+  useModalLock(true)
 
   useEffect(() => {
     supabase
