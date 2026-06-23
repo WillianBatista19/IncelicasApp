@@ -30,7 +30,7 @@ export default async function CommunityPage({ params }: Props) {
       .select(`
         id, community_id, user_id, content, image_url, media_url, created_at,
         profiles!community_posts_user_id_fkey (id, username, display_name, avatar_url),
-        community_post_vibes (id, post_id, user_id, type, created_at),
+        community_post_vibes!community_post_vibes_post_id_fkey (id, user_id, type),
         community_comments (id)
       `)
       .eq('community_id', c.id)

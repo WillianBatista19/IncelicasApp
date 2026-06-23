@@ -1,29 +1,5 @@
 {
   "node": {
-    "53f6bebc50f83ac9f80355c9095e6569e6a72f3f": {
-      "workers": {
-        "app/(app)/communities/musica/survivor/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5CWillian%5C%5CDocuments%5C%5Cincelicas_rede%5C%5Csrc%5C%5Capp%5C%5C(app)%5C%5Ccommunities%5C%5Cmusica%5C%5Csurvivor%5C%5Cactions.ts%22%2C%5B%22advanceRound%22%2C%22castVote%22%2C%22createSurvivorEvent%22%5D%5D%5D&__client_imported__=true!"
-      },
-      "layer": {
-        "app/(app)/communities/musica/survivor/page": "action-browser"
-      }
-    },
-    "6bfa34756d1c07f4fc60c81ea39354459686a03a": {
-      "workers": {
-        "app/(app)/communities/musica/survivor/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5CWillian%5C%5CDocuments%5C%5Cincelicas_rede%5C%5Csrc%5C%5Capp%5C%5C(app)%5C%5Ccommunities%5C%5Cmusica%5C%5Csurvivor%5C%5Cactions.ts%22%2C%5B%22advanceRound%22%2C%22castVote%22%2C%22createSurvivorEvent%22%5D%5D%5D&__client_imported__=true!"
-      },
-      "layer": {
-        "app/(app)/communities/musica/survivor/page": "action-browser"
-      }
-    },
-    "bea7100b48a05b5eb546575bda2785a9f905fa46": {
-      "workers": {
-        "app/(app)/communities/musica/survivor/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5CWillian%5C%5CDocuments%5C%5Cincelicas_rede%5C%5Csrc%5C%5Capp%5C%5C(app)%5C%5Ccommunities%5C%5Cmusica%5C%5Csurvivor%5C%5Cactions.ts%22%2C%5B%22advanceRound%22%2C%22castVote%22%2C%22createSurvivorEvent%22%5D%5D%5D&__client_imported__=true!"
-      },
-      "layer": {
-        "app/(app)/communities/musica/survivor/page": "action-browser"
-      }
-    },
     "0bbf2ba5de9942af56dbf9b6babdabf445466ae6": {
       "workers": {
         "app/(app)/communities/[slug]/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5CWillian%5C%5CDocuments%5C%5Cincelicas_rede%5C%5Csrc%5C%5Capp%5C%5C(app)%5C%5Ccommunities%5C%5Cactions.ts%22%2C%5B%22createCommunityPost%22%2C%22toggleNotificationsMuted%22%2C%22joinCommunity%22%2C%22deleteCommunityPost%22%2C%22createCommunity%22%2C%22leaveCommunity%22%2C%22updateCommunitySettings%22%2C%22updateMemberRole%22%2C%22deleteCommunityComment%22%2C%22deleteCommunity%22%2C%22updateMemberCanPost%22%2C%22createCommunityComment%22%2C%22removeMember%22%5D%5D%5D&__client_imported__=true!",
@@ -209,24 +185,8 @@
       "layer": {
         "app/(app)/feed/page": "action-browser"
       }
-    },
-    "16d49ba18dec63923ba7763b5da60809ab11839c": {
-      "workers": {
-        "app/(app)/communities/musica/avaliar/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5CWillian%5C%5CDocuments%5C%5Cincelicas_rede%5C%5Csrc%5C%5Capp%5C%5C(app)%5C%5Ccommunities%5C%5Cmusica%5C%5Cavaliar%5C%5Cactions.ts%22%2C%5B%22getUserAlbumRating%22%2C%22saveAlbumRating%22%5D%5D%5D&__client_imported__=true!"
-      },
-      "layer": {
-        "app/(app)/communities/musica/avaliar/page": "action-browser"
-      }
-    },
-    "673294d5a60e8c17aa58272ba80687ef40b8285a": {
-      "workers": {
-        "app/(app)/communities/musica/avaliar/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5CWillian%5C%5CDocuments%5C%5Cincelicas_rede%5C%5Csrc%5C%5Capp%5C%5C(app)%5C%5Ccommunities%5C%5Cmusica%5C%5Cavaliar%5C%5Cactions.ts%22%2C%5B%22getUserAlbumRating%22%2C%22saveAlbumRating%22%5D%5D%5D&__client_imported__=true!"
-      },
-      "layer": {
-        "app/(app)/communities/musica/avaliar/page": "action-browser"
-      }
     }
   },
   "edge": {},
-  "encryptionKey": "zoqXXYloK2/XDuLgvXRiJ8lYUe2p+53WprGGLvEeJ+Y="
+  "encryptionKey": "bChxBXdG1zLePDuNNC3EIYO50aj6xArZoY0r2iQOK00="
 }

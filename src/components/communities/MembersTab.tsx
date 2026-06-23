@@ -54,16 +54,16 @@ export default function MembersTab({ communityId, members: initial, currentUserI
 
         return (
           <div key={m.user_id} className="flex items-center gap-3 rounded-xl bg-white/5 p-3">
-            <Link href={`/profile/${profile.username}`}>
+            <Link href={`/profile/${profile.username}`} className="overflow-hidden rounded-full flex-shrink-0">
               {profile.avatar_url ? (
                 <Image
                   src={profile.avatar_url}
                   alt={profile.display_name ?? profile.username}
-                  width={36} height={36}
-                  className="rounded-full object-cover shrink-0"
+                  width={40} height={40}
+                  className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                 />
               ) : (
-                <div className="w-9 h-9 rounded-full bg-[#7F77DD] flex items-center justify-center text-white text-sm shrink-0">
+                <div className="w-10 h-10 rounded-full bg-[#7F77DD] flex items-center justify-center text-white text-sm flex-shrink-0">
                   {(profile.display_name ?? profile.username)[0].toUpperCase()}
                 </div>
               )}
