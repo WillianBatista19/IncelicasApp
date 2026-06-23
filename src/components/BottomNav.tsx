@@ -86,6 +86,11 @@ export default function BottomNav() {
           </span>
         </NavLink>
 
+        {/* Communities */}
+        <NavLink href="/communities" active={pathname.startsWith('/communities')} label="Comunidades">
+          <CommunitiesIcon />
+        </NavLink>
+
         {/* Theme toggle */}
         <ThemeToggle className="flex flex-1 items-center justify-center text-zinc-500 transition-colors hover:text-zinc-300" />
 
@@ -164,6 +169,15 @@ function MessageIcon() {
   return (
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+    </svg>
+  )
+}
+
+function CommunitiesIcon() {
+  return (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+      <polyline points="9 22 9 12 15 12 15 22" />
     </svg>
   )
 }

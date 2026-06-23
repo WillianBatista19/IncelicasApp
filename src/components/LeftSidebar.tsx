@@ -47,7 +47,8 @@ export default function LeftSidebar() {
     { href: '/explore',       label: 'Explorar',      icon: CompassIcon, badge: 0 },
     { href: '/notifications', label: 'Notificações',  icon: BellIcon,    badge: unread },
     { href: '/messages',      label: 'Mensagens',     icon: MessageIcon, badge: unreadMsg },
-    { href: '/jogar',         label: 'Jogar',         icon: GameIcon,    badge: 0 },
+    { href: '/jogar',         label: 'Jogar',         icon: GameIcon,       badge: 0 },
+    { href: '/communities',   label: 'Comunidades',   icon: CommunitiesIcon, badge: 0 },
     { href: profileHref,      label: 'Perfil',        icon: UserIcon,    badge: 0 },
   ]
 
@@ -164,6 +165,15 @@ function GameIcon({ className }: { className?: string }) {
       <path d="M6 12h4M8 10v4" />
       <circle cx="16" cy="11" r="1" fill="currentColor" stroke="none" />
       <circle cx="18" cy="13" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+function CommunitiesIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+      <polyline points="9 22 9 12 15 12 15 22" />
     </svg>
   )
 }

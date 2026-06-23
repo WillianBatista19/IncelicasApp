@@ -6,8 +6,6 @@
 
 export const COMING_SOON: string[] = [
   'Editar post após publicar',
-  'Busca de posts e conteúdo',
   'Notificações push (Web Push API)',
-  'Salvar posts para ver depois',
   'PWA — instalar como app no celular',
 ]

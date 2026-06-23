@@ -39,6 +39,14 @@ export function notificationText(
       return `${actorName} quer te seguir`
     case 'follow_accepted':
       return `${actorName} aceitou seu pedido de seguir`
+    case 'community_post':
+      return commentContent
+        ? `${actorName} postou em ${commentContent}`
+        : `${actorName} postou em uma comunidade`
+    case 'community_comment':
+      return commentContent
+        ? `${actorName} comentou no seu post em ${commentContent}`
+        : `${actorName} comentou no seu post`
   }
 }
 
@@ -56,7 +64,9 @@ export function notificationEmoji(type: NotificationType): string {
     case 'group_message':  return '💬'
     case 'story_like':       return '❤️'
     case 'follow_request':   return '🔒'
-    case 'follow_accepted':  return '✅'
+    case 'follow_accepted':    return '✅'
+    case 'community_post':     return '🏘️'
+    case 'community_comment':  return '💬'
   }
 }
 
@@ -88,6 +98,9 @@ export function notificationHref(
       return `/profile/${username}`
     case 'follow_accepted':
       return `/profile/${username}`
+    case 'community_post':
+    case 'community_comment':
+      return '/communities'
     default:
       // vibe, mention
       return postId ? `/post/${postId}` : `/profile/${username}`

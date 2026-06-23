@@ -1,9 +1,9 @@
 {
   "pages": {
-    "/(app)/profile/[username]/page": [
+    "/(app)/communities/[slug]/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(app)/profile/[username]/page.js"
+      "static/chunks/app/(app)/communities/[slug]/page.js"
     ],
     "/(app)/layout": [
       "static/chunks/webpack.js",
@@ -16,35 +16,30 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/(app)/profile/edit/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(app)/profile/edit/page.js"
-    ],
     "/(app)/feed/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/(app)/feed/page.js"
     ],
+    "/(app)/jogar/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/jogar/page.js"
+    ],
+    "/(app)/communities/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/communities/page.js"
+    ],
+    "/(app)/communities/[slug]/settings/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/communities/[slug]/settings/page.js"
+    ],
     "/(app)/notifications/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/(app)/notifications/page.js"
-    ],
-    "/(app)/post/[id]/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(app)/post/[id]/page.js"
-    ],
-    "/(auth)/login/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(auth)/login/page.js"
-    ],
-    "/(auth)/layout": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(auth)/layout.js"
     ],
     "/_not-found/page": [
       "static/chunks/webpack.js",

@@ -14,6 +14,8 @@ export type NotificationType =
   | 'story_like'
   | 'follow_request'
   | 'follow_accepted'
+  | 'community_post'
+  | 'community_comment'
 
 export interface WatchingNow {
   id:         number
@@ -141,6 +143,62 @@ export interface ConversationSummary {
   participants:     ConversationParticipant[]
   otherUser:        ConversationParticipant | null
   lastMessage:      ConversationMessage | null
+}
+
+export type PostPermission = 'all' | 'owner_only' | 'allowed_users'
+export type CommunityRole  = 'owner' | 'moderator' | 'member'
+
+export interface CommunityVibe {
+  id:         string
+  post_id:    string
+  user_id:    string
+  type:       VibeType
+  created_at: string
+}
+
+export interface Community {
+  id:              string
+  name:            string
+  slug:            string
+  description:     string | null
+  avatar_url:      string | null
+  banner_url:      string | null
+  created_by:      string
+  member_count:    number
+  post_permission: PostPermission
+  created_at:      string
+}
+
+export interface CommunityMemberRow {
+  community_id: string
+  user_id:      string
+  role:         CommunityRole
+  can_post:     boolean
+  joined_at:    string
+  profiles?: {
+    id:           string
+    username:     string
+    display_name: string | null
+    avatar_url:   string | null
+  }
+}
+
+export interface CommunityPost {
+  id:           string
+  community_id: string
+  user_id:      string
+  content:      string
+  image_url:    string | null
+  media_url:    string | null
+  created_at:   string
+  profiles: {
+    id:           string
+    username:     string
+    display_name: string | null
+    avatar_url:   string | null
+  }
+  community_post_vibes: CommunityVibe[]
+  community_comments:   { id: string }[]
 }
 
 export interface Post {
