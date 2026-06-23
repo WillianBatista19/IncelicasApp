@@ -203,7 +203,8 @@ export default async function AlbumResultsPage({ params }: Props) {
         <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Quem avaliou</h2>
         <div className="space-y-2">
           {rows.map(row => {
-            const p = row.profiles as { username: string; display_name: string | null; avatar_url: string | null } | null
+            const profileData = row.profiles
+            const p = (Array.isArray(profileData) ? profileData[0] : profileData) as { username: string; display_name: string | null; avatar_url: string | null } | null
             const name = p?.display_name ?? p?.username ?? 'Incelica'
             return (
               <div key={row.id} className="flex items-center gap-3 rounded-xl bg-white/5 p-3">

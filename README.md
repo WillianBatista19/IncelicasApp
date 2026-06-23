@@ -296,7 +296,7 @@ Adicione as variáveis de ambiente no painel do Vercel em **Settings → Environ
 - [✅] Salvar/favoritar posts
 - [ ] Notificações push no celular (Web Push API)
 - [ ] PWA — instalar como app no celular
-- [ ] Moderação de conteúdo
+- [✅] Moderação de conteúdo
 
 ## Licença
 

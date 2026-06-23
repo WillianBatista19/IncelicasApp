@@ -72,7 +72,8 @@ export default async function AvaliarPage({ searchParams }: { searchParams?: Sea
 
   // Recent: one row per rating (not de-duped by album), most recent first
   const recentRatings: RecentRating[] = (allRatings ?? []).slice(0, 8).map(r => {
-    const p = r.profiles as { username: string; display_name: string | null } | null
+    const profileData = r.profiles
+    const p = (Array.isArray(profileData) ? profileData[0] : profileData) as { username: string; display_name: string | null } | null
     return {
       album_id:      r.album_id,
       album_name:    r.album_name,
