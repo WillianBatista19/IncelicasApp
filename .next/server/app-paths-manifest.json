@@ -1,5 +1,8 @@
 {
-  "/api/contexto/similarity/route": "app/api/contexto/similarity/route.js",
+  "/page": "app/page.js",
   "/icon.svg/route": "app/icon.svg/route.js",
-  "/(app)/jogar/page": "app/(app)/jogar/page.js"
+  "/(app)/jogar/page": "app/(app)/jogar/page.js",
+  "/(app)/feed/page": "app/(app)/feed/page.js",
+  "/(app)/notifications/page": "app/(app)/notifications/page.js",
+  "/(app)/post/[id]/page": "app/(app)/post/[id]/page.js"
 }

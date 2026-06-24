@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 const WORD_LEN  = 5
@@ -11,25 +11,24 @@ type LetterState = 'correct' | 'present' | 'absent'
 
 function evaluateGuess(guess: string, target: string): LetterState[] {
   const result    = Array<LetterState>(WORD_LEN).fill('absent')
-  const remaining = target.split('')   // tracks un-consumed target letters
+  const remaining = target.split('')
 
   // Pass 1 — greens: correct letter at correct position
   for (let i = 0; i < WORD_LEN; i++) {
     if (guess[i] === target[i]) {
       result[i]    = 'correct'
-      remaining[i] = ''              // consume so pass 2 can't re-use it
+      remaining[i] = ''
     }
   }
 
-  // Pass 2 — yellows: correct letter at wrong position (only for non-green slots)
-  // Uses remaining[] to handle duplicates: e.g. target "CARRO", guess "RRRRR"
-  // → only 2 of the 5 Rs get yellow/green, the rest get gray.
+  // Pass 2 — yellows: correct letter at wrong position
+  // Uses remaining[] to handle duplicates correctly
   for (let i = 0; i < WORD_LEN; i++) {
     if (result[i] === 'correct') continue
     const j = remaining.indexOf(guess[i])
     if (j !== -1) {
       result[i]    = 'present'
-      remaining[j] = ''             // consume so the next duplicate stays gray
+      remaining[j] = ''
     }
   }
 
@@ -50,18 +49,22 @@ const KB_ROWS = [
   ['ENTER','Z','X','C','V','B','N','M','⌫'],
 ]
 
+const LETTER_RE = /^[A-ZÁÉÍÓÚÃÕÂÊÔÇ]$/
+
 export default function WordGame({ currentUserId }: { currentUserId: string | null }) {
   const supabase = useMemo(() => createClient(), [])
   const today    = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
 
   const [word,         setWord]         = useState('')
   const [guesses,      setGuesses]      = useState<string[]>([])
-  const [currentGuess, setCurrentGuess] = useState('')
+  const [currentGuess, setCurrentGuess] = useState<string[]>(Array(WORD_LEN).fill(''))
+  const [selectedCell, setSelectedCell] = useState(0)
   const [gameOver,     setGameOver]     = useState(false)
   const [won,          setWon]          = useState(false)
   const [loading,      setLoading]      = useState(true)
   const [message,      setMessage]      = useState('')
   const [errorRow,     setErrorRow]     = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     async function init() {
@@ -113,16 +116,18 @@ export default function WordGame({ currentUserId }: { currentUserId: string | nu
   }, [])
 
   const submitGuess = useCallback(async () => {
-    if (currentGuess.length !== WORD_LEN) {
+    const guessStr = currentGuess.join('')
+    if (currentGuess.some(c => c === '')) {
       flash('Digite 5 letras')
       setErrorRow(true); setTimeout(() => setErrorRow(false), 400)
       return
     }
-    const newGuesses = [...guesses, currentGuess]
+    const newGuesses = [...guesses, guessStr]
     setGuesses(newGuesses)
-    setCurrentGuess('')
+    setCurrentGuess(Array(WORD_LEN).fill(''))
+    setSelectedCell(0)
 
-    const solved = currentGuess === word
+    const solved = guessStr === word
     const over   = solved || newGuesses.length >= MAX_TRIES
 
     if (solved) flash(`Arrasou! 🎉 +${SCORES[newGuesses.length - 1] ?? 0} pts`)
@@ -149,14 +154,31 @@ export default function WordGame({ currentUserId }: { currentUserId: string | nu
   const handleKey = useCallback((key: string) => {
     if (gameOver) return
     if (key === '⌫' || key === 'BACKSPACE') {
-      setCurrentGuess(g => g.slice(0, -1))
+      setCurrentGuess(g => {
+        const next = [...g]
+        next[selectedCell] = ''
+        return next
+      })
+      setSelectedCell(s => Math.max(0, s - 1))
     } else if (key === 'ENTER') {
       void submitGuess()
-    } else if (/^[A-ZÁÉÍÓÚÃÕÂÊÔÇ]$/.test(key) && currentGuess.length < WORD_LEN) {
-      setCurrentGuess(g => g + key)
+    } else if (key === 'ARROWLEFT') {
+      setSelectedCell(s => Math.max(0, s - 1))
+    } else if (key === 'ARROWRIGHT') {
+      setSelectedCell(s => Math.min(WORD_LEN - 1, s + 1))
+    } else if (LETTER_RE.test(key)) {
+      const next = [...currentGuess]
+      next[selectedCell] = key
+      setCurrentGuess(next)
+      // Advance to the next empty cell after the current one
+      const nextEmptyOffset = next.slice(selectedCell + 1).findIndex(c => c === '')
+      if (nextEmptyOffset !== -1) {
+        setSelectedCell(selectedCell + 1 + nextEmptyOffset)
+      }
     }
-  }, [gameOver, currentGuess.length, submitGuess])
+  }, [gameOver, selectedCell, currentGuess, submitGuess])
 
+  // Global keyboard listener — only fires when the hidden input is not focused
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).tagName === 'INPUT') return
@@ -176,10 +198,9 @@ export default function WordGame({ currentUserId }: { currentUserId: string | nu
       return { letters: g.split(''), states: evaluateGuess(g, word) as Array<LetterState | 'empty' | 'current'> }
     }
     if (i === guesses.length && !gameOver) {
-      const letters = currentGuess.padEnd(WORD_LEN).split('')
       return {
-        letters,
-        states: letters.map((_, j) => (j < currentGuess.length ? 'current' : 'empty')) as Array<LetterState | 'empty' | 'current'>,
+        letters: currentGuess,
+        states:  currentGuess.map(c => (c !== '' ? 'current' : 'empty')) as Array<LetterState | 'empty' | 'current'>,
       }
     }
     return { letters: Array(WORD_LEN).fill(''), states: Array(WORD_LEN).fill('empty') as Array<'empty'> }
@@ -187,6 +208,40 @@ export default function WordGame({ currentUserId }: { currentUserId: string | nu
 
   return (
     <div className="flex flex-col items-center gap-5">
+      {/*
+        Hidden input for mobile keyboard capture.
+        Positioned off-screen so it's invisible but still focusable.
+        Tapping a cell focuses this input, opening the native keyboard.
+        onKeyDown handles special keys; onChange captures character input
+        from virtual keyboards that don't reliably fire keydown for letters.
+      */}
+      <input
+        ref={inputRef}
+        type="text"
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="characters"
+        spellCheck={false}
+        style={{ position: 'fixed', left: '-9999px', top: '50%' }}
+        tabIndex={-1}
+        onKeyDown={e => {
+          switch (e.key) {
+            case 'Backspace':   e.preventDefault(); handleKey('BACKSPACE');   break
+            case 'Enter':       e.preventDefault(); handleKey('ENTER');       break
+            case 'ArrowLeft':   e.preventDefault(); handleKey('ARROWLEFT');   break
+            case 'ArrowRight':  e.preventDefault(); handleKey('ARROWRIGHT');  break
+          }
+        }}
+        onChange={e => {
+          const val = e.target.value
+          if (val) {
+            const char = val[val.length - 1].toUpperCase()
+            if (LETTER_RE.test(char)) handleKey(char)
+            e.target.value = ''
+          }
+        }}
+      />
+
       {message && (
         <div className="rounded-xl bg-zinc-800 px-4 py-2 text-sm font-semibold text-zinc-100">
           {message}
@@ -195,21 +250,30 @@ export default function WordGame({ currentUserId }: { currentUserId: string | nu
 
       {/* Board */}
       <div className="flex flex-col gap-1.5">
-        {displayRows.map((row, ri) => (
-          <div
-            key={ri}
-            className={`flex gap-1.5 ${ri === guesses.length && errorRow ? 'animate-pulse' : ''}`}
-          >
-            {row.letters.map((letter, ci) => (
-              <div
-                key={ci}
-                className={`flex h-12 w-12 items-center justify-center rounded-lg border-2 text-lg font-black uppercase transition-colors duration-300 ${TILE_STYLE[row.states[ci]]}`}
-              >
-                {letter.trim()}
-              </div>
-            ))}
-          </div>
-        ))}
+        {displayRows.map((row, ri) => {
+          const isActiveRow = ri === guesses.length && !gameOver
+          return (
+            <div
+              key={ri}
+              className={`flex gap-1.5 ${isActiveRow && errorRow ? 'animate-pulse' : ''}`}
+            >
+              {row.letters.map((letter, ci) => {
+                const isSelected = isActiveRow && ci === selectedCell
+                return (
+                  <div
+                    key={ci}
+                    onClick={isActiveRow ? () => { setSelectedCell(ci); inputRef.current?.focus() } : undefined}
+                    className={`flex h-12 w-12 items-center justify-center rounded-lg border-2 text-lg font-black uppercase transition-colors duration-300 ${
+                      isSelected ? 'ring-2 ring-[#D4537E]' : ''
+                    } ${isActiveRow ? 'cursor-pointer' : ''} ${TILE_STYLE[row.states[ci]]}`}
+                  >
+                    {letter.trim()}
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })}
       </div>
 
       {/* On-screen keyboard */}
