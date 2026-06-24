@@ -1,6 +1,6 @@
 {
+  "/api/contexto/generate-embedding/route": "app/api/contexto/generate-embedding/route.js",
   "/api/contexto/similarity/route": "app/api/contexto/similarity/route.js",
   "/(app)/jogar/page": "app/(app)/jogar/page.js",
-  "/(app)/jogar/admin/page": "app/(app)/jogar/admin/page.js",
-  "/(app)/notifications/page": "app/(app)/notifications/page.js"
+  "/(app)/jogar/admin/page": "app/(app)/jogar/admin/page.js"
 }
