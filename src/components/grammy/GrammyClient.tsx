@@ -4,16 +4,62 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   saveGrammyVotes,
-  createGrammyEdition,
+  createGrammyEditionWithCategories,
   addGrammyCategory,
   addGrammyNominee,
   closeGrammyVoting,
   revealGrammyWinners,
+  toggleCategoryActive,
   deleteGrammyCategory,
   deleteGrammyNominee,
 } from '@/app/(app)/communities/musica/grammy/actions'
 import type { GrammyEdition } from '@/types'
 import type { GrammyCategoryFull, GrammyRankingEntry } from '@/app/(app)/communities/musica/grammy/page'
+
+// ─── Section grouping ─────────────────────────────────────────────────────────
+
+const SECTION_GROUPS: Array<{ label: string; min: number; max: number }> = [
+  { label: '⭐ Principais',       min: 1,  max: 4  },
+  { label: '🎤 Pop',              min: 5,  max: 10 },
+  { label: '💿 Dança/Eletrônica', min: 11, max: 12 },
+  { label: '🎸 R&B',              min: 13, max: 18 },
+  { label: '🎤 Rap/Hip-Hop',      min: 19, max: 22 },
+  { label: '🤠 Country',          min: 23, max: 26 },
+  { label: '🎸 Rock',             min: 27, max: 30 },
+  { label: '🎵 Alternativo',      min: 31, max: 32 },
+  { label: '🎷 Jazz',             min: 33, max: 35 },
+  { label: '✝️ Gospel/Cristão',   min: 36, max: 37 },
+  { label: '💃 Latino',           min: 38, max: 41 },
+  { label: '🌾 Folk',             min: 42, max: 43 },
+  { label: '🌍 World/Clássico',   min: 44, max: 45 },
+  { label: '🎬 Mídia Visual',     min: 46, max: 50 },
+]
+
+function groupCategories(cats: GrammyCategoryFull[]) {
+  const grouped: Array<{ label: string; categories: GrammyCategoryFull[] }> = []
+  const ungrouped: GrammyCategoryFull[] = []
+
+  for (const cat of cats) {
+    const section = SECTION_GROUPS.find(s => cat.display_order >= s.min && cat.display_order <= s.max)
+    if (section) {
+      const existing = grouped.find(g => g.label === section.label)
+      if (existing) existing.categories.push(cat)
+      else grouped.push({ label: section.label, categories: [cat] })
+    } else {
+      ungrouped.push(cat)
+    }
+  }
+
+  // Preserve section order from SECTION_GROUPS
+  const ordered = SECTION_GROUPS
+    .map(s => grouped.find(g => g.label === s.label))
+    .filter((g): g is NonNullable<typeof g> => !!g)
+
+  if (ungrouped.length > 0) ordered.push({ label: '📂 Outras', categories: ungrouped })
+  return ordered
+}
+
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
   edition:           GrammyEdition | null
@@ -27,6 +73,8 @@ interface Props {
 }
 
 type MainTab = 'vote' | 'results' | 'ranking'
+
+// ─── Root component ───────────────────────────────────────────────────────────
 
 export default function GrammyClient({
   edition, categories, userVotes, ranking, isAdmin, allEditions, currentUserId, daysUntilCeremony,
@@ -46,9 +94,10 @@ export default function GrammyClient({
     return init
   })
 
-  const [savingCat,  setSavingCat]  = useState<string | null>(null)
-  const [savedCats,  setSavedCats]  = useState<Set<string>>(() => new Set(Object.keys(userVotes)))
-  const [toast,      setToast]      = useState<string | null>(null)
+  const [savingCat, setSavingCat] = useState<string | null>(null)
+  const [savingAll, setSavingAll] = useState(false)
+  const [savedCats, setSavedCats] = useState<Set<string>>(() => new Set(Object.keys(userVotes)))
+  const [toast,     setToast]     = useState<string | null>(null)
 
   function showToast(msg: string) {
     setToast(msg)
@@ -82,6 +131,31 @@ export default function GrammyClient({
     router.refresh()
   }
 
+  async function handleSaveAll() {
+    if (!edition || !currentUserId) return
+    const activeCategories = categories.filter(c => c.is_active)
+    const pending = activeCategories.filter(c => !!localVotes[c.id]?.prediction)
+    if (pending.length === 0) { showToast('Faça pelo menos uma previsão antes de salvar'); return }
+    setSavingAll(true)
+    const result = await saveGrammyVotes(
+      edition.id,
+      pending.map(c => ({
+        categoryId:          c.id,
+        predictionNomineeId: localVotes[c.id].prediction!,
+        wishNomineeId:       localVotes[c.id].wish ?? null,
+      })),
+    )
+    setSavingAll(false)
+    if (result.error) { showToast(result.error); return }
+    setSavedCats(prev => {
+      const next = new Set(prev)
+      pending.forEach(c => next.add(c.id))
+      return next
+    })
+    showToast(`${pending.length} ${pending.length === 1 ? 'voto salvo' : 'votos salvos'}!`)
+    router.refresh()
+  }
+
   if (!edition && !isAdmin) {
     return (
       <div className="text-center py-16 space-y-2">
@@ -93,33 +167,54 @@ export default function GrammyClient({
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="rounded-xl bg-zinc-900/60 border border-zinc-800 p-5 flex items-start gap-3">
-        <span className="text-4xl shrink-0">🏆</span>
-        <div>
-          {edition ? (
-            <>
-              <h1 className="text-xl font-bold text-zinc-100">Grammy {edition.year}</h1>
-              {edition.status === 'voting' && daysUntilCeremony > 0 && (
-                <p className="text-sm text-[#D4537E] mt-1">faltam {daysUntilCeremony} dias para a cerimônia</p>
-              )}
-              {edition.status === 'voting' && daysUntilCeremony === 0 && (
-                <p className="text-sm text-[#D4537E] mt-1">A cerimônia é hoje! 🎉</p>
-              )}
-              {edition.status === 'closed' && (
-                <p className="text-sm text-yellow-400 mt-1">⏳ Votações encerradas — aguardando resultados</p>
-              )}
-              {edition.status === 'revealed' && (
-                <p className="text-sm text-[#1D9E75] mt-1">✅ Resultados revelados!</p>
-              )}
-            </>
-          ) : (
-            <h1 className="text-xl font-bold text-zinc-100">Grammy Predictions</h1>
-          )}
+
+      {/* ── Header ── */}
+      <div className="rounded-xl bg-zinc-900/60 border border-zinc-800 p-5">
+        <div className="flex items-start gap-3">
+          <span className="text-4xl shrink-0">🏆</span>
+          <div className="flex-1 min-w-0">
+            {edition ? (
+              <>
+                <h1 className="text-xl font-bold text-zinc-100">Grammy {edition.year}</h1>
+                {edition.status === 'voting' && daysUntilCeremony > 0 && (
+                  <p className="text-sm text-[#D4537E] mt-0.5">faltam {daysUntilCeremony} dias para a cerimônia</p>
+                )}
+                {edition.status === 'voting' && daysUntilCeremony === 0 && (
+                  <p className="text-sm text-[#D4537E] mt-0.5">A cerimônia é hoje! 🎉</p>
+                )}
+                {edition.status === 'closed' && (
+                  <p className="text-sm text-yellow-400 mt-0.5">⏳ Votações encerradas — aguardando resultados</p>
+                )}
+                {edition.status === 'revealed' && (
+                  <p className="text-sm text-[#1D9E75] mt-0.5">✅ Resultados revelados!</p>
+                )}
+              </>
+            ) : (
+              <h1 className="text-xl font-bold text-zinc-100">Grammy Predictions</h1>
+            )}
+          </div>
         </div>
+
+        {/* Grammy 2027 ceremony details */}
+        {edition?.year === 2027 && (
+          <div className="mt-4 pt-4 border-t border-zinc-800 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-zinc-500">
+            <div className="flex items-center gap-1.5">
+              <span>📅</span>
+              <span>9 de fevereiro de 2027</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span>📍</span>
+              <span>Crypto.com Arena, Los Angeles</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span>📺</span>
+              <span>ABC · Hulu · Disney+</span>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Tabs (only shown when revealed) */}
+      {/* ── Tabs (revealed only) ── */}
       {edition?.status === 'revealed' && (
         <div className="flex gap-1 border-b border-zinc-800">
           <TabBtn active={tab === 'results'} onClick={() => setTab('results')}>🏆 Resultados</TabBtn>
@@ -127,7 +222,7 @@ export default function GrammyClient({
         </div>
       )}
 
-      {/* Vote / closed view */}
+      {/* ── Vote / closed ── */}
       {edition && edition.status !== 'revealed' && (
         <VoteSection
           edition={edition}
@@ -135,13 +230,15 @@ export default function GrammyClient({
           localVotes={localVotes}
           savedCats={savedCats}
           savingCat={savingCat}
+          savingAll={savingAll}
           currentUserId={currentUserId}
           toggleVote={toggleVote}
           onSave={handleSaveCategory}
+          onSaveAll={handleSaveAll}
         />
       )}
 
-      {/* Results tab */}
+      {/* ── Results ── */}
       {tab === 'results' && edition?.status === 'revealed' && (
         <ResultsSection
           categories={categories}
@@ -150,12 +247,12 @@ export default function GrammyClient({
         />
       )}
 
-      {/* Ranking tab */}
+      {/* ── Ranking ── */}
       {tab === 'ranking' && edition?.status === 'revealed' && (
         <RankingSection ranking={ranking} currentUserId={currentUserId} />
       )}
 
-      {/* Admin panel */}
+      {/* ── Admin panel ── */}
       {isAdmin && (
         <AdminPanel
           edition={edition}
@@ -189,20 +286,22 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
   )
 }
 
-// ─── VoteSection ─────────────────────────────────────────────────────────────
+// ─── VoteSection ──────────────────────────────────────────────────────────────
 
 function VoteSection({
-  edition, categories, localVotes, savedCats, savingCat, currentUserId,
-  toggleVote, onSave,
+  edition, categories, localVotes, savedCats, savingCat, savingAll, currentUserId,
+  toggleVote, onSave, onSaveAll,
 }: {
-  edition:      GrammyEdition
-  categories:   GrammyCategoryFull[]
-  localVotes:   Record<string, { prediction: string | null; wish: string | null }>
-  savedCats:    Set<string>
-  savingCat:    string | null
+  edition:       GrammyEdition
+  categories:    GrammyCategoryFull[]
+  localVotes:    Record<string, { prediction: string | null; wish: string | null }>
+  savedCats:     Set<string>
+  savingCat:     string | null
+  savingAll:     boolean
   currentUserId: string | null
-  toggleVote:   (catId: string, type: 'prediction' | 'wish', nomineeId: string) => void
-  onSave:       (catId: string) => void
+  toggleVote:    (catId: string, type: 'prediction' | 'wish', nomineeId: string) => void
+  onSave:        (catId: string) => void
+  onSaveAll:     () => void
 }) {
   if (edition.status === 'closed') {
     return (
@@ -211,9 +310,9 @@ function VoteSection({
         <p className="text-zinc-300 font-medium">Votações encerradas</p>
         <p className="text-zinc-500 text-sm">Aguarde a revelação dos vencedores.</p>
         {categories.length > 0 && (
-          <div className="pt-4 space-y-2">
-            {categories.map(cat => (
-              <div key={cat.id} className="text-left rounded-lg bg-zinc-800/50 px-3 py-2 text-sm">
+          <div className="pt-4 space-y-2 text-left">
+            {categories.filter(c => c.is_active).map(cat => (
+              <div key={cat.id} className="rounded-lg bg-zinc-800/50 px-3 py-2 text-sm">
                 <span className="text-zinc-300 font-medium">{cat.name}</span>
                 <span className="text-zinc-600 ml-2 text-xs">{cat.vote_count} votos</span>
               </div>
@@ -224,9 +323,16 @@ function VoteSection({
     )
   }
 
-  if (categories.length === 0) {
+  const activeCategories = categories.filter(c => c.is_active)
+
+  if (activeCategories.length === 0) {
     return <p className="text-zinc-500 text-center py-10">Nenhuma categoria disponível ainda.</p>
   }
+
+  const canVote       = !!currentUserId && edition.status === 'voting'
+  const sections      = groupCategories(activeCategories)
+  const pendingCount  = activeCategories.filter(c => !!localVotes[c.id]?.prediction && !savedCats.has(c.id)).length
+  const totalPending  = activeCategories.filter(c => !!localVotes[c.id]?.prediction).length
 
   return (
     <div className="space-y-4">
@@ -236,104 +342,145 @@ function VoteSection({
         </div>
       )}
 
-      {categories.map(cat => {
-        const votes   = localVotes[cat.id] ?? { prediction: null, wish: null }
-        const isSaved = savedCats.has(cat.id)
-        const isSaving = savingCat === cat.id
-        const canVote = !!currentUserId && edition.status === 'voting'
+      {/* Save all button */}
+      {canVote && totalPending > 0 && (
+        <button
+          onClick={onSaveAll}
+          disabled={savingAll}
+          className="w-full rounded-xl bg-[#7F77DD] text-white py-3 text-sm font-semibold hover:bg-[#6e67cc] disabled:opacity-50 transition"
+        >
+          {savingAll ? 'Salvando...' : `💾 Salvar todos os votos (${totalPending} ${totalPending === 1 ? 'categoria' : 'categorias'})`}
+        </button>
+      )}
 
-        return (
-          <div key={cat.id} className="rounded-xl bg-zinc-900/60 border border-zinc-800 overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
-              <h2 className="font-semibold text-zinc-100">{cat.name}</h2>
-              <span className="text-xs text-zinc-500">
-                {cat.vote_count} {cat.vote_count === 1 ? 'voto' : 'votos'}
-              </span>
-            </div>
+      {sections.map(section => (
+        <div key={section.label}>
+          <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-500 px-1 mb-2">{section.label}</h2>
+          <div className="space-y-3">
+            {section.categories.map(cat => {
+              const votes    = localVotes[cat.id] ?? { prediction: null, wish: null }
+              const isSaved  = savedCats.has(cat.id)
+              const isSaving = savingCat === cat.id
 
-            <div className="p-3 space-y-2">
-              {canVote && (
-                <div className="flex gap-4 text-xs text-zinc-500 pb-1">
-                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#D4537E] inline-block" />🎯 Vai ganhar</span>
-                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#7F77DD] inline-block" />💜 Deveria ganhar (opcional)</span>
-                </div>
-              )}
-
-              <div className="space-y-1.5">
-                {cat.nominees.map(nominee => {
-                  const isPrediction = votes.prediction === nominee.id
-                  const isWish       = votes.wish       === nominee.id
-                  return (
-                    <div
-                      key={nominee.id}
-                      className={`flex items-center gap-3 rounded-xl border p-2.5 transition-colors ${
-                        isPrediction ? 'border-[#D4537E] bg-[#D4537E]/10' :
-                        isWish       ? 'border-[#7F77DD] bg-[#7F77DD]/10' :
-                                       'border-zinc-700 bg-zinc-800/40'
-                      }`}
-                    >
-                      <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-zinc-700 flex items-center justify-center">
-                        {nominee.cover_url
-                          ? (/* eslint-disable-next-line @next/next/no-img-element */
-                            <img src={nominee.cover_url} alt={nominee.name} className="w-full h-full object-cover" />)
-                          : <span className="text-zinc-500 text-lg">🎵</span>
-                        }
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-zinc-100 truncate">{nominee.name}</p>
-                        {nominee.artist && <p className="text-xs text-zinc-500 truncate">{nominee.artist}</p>}
-                      </div>
-
-                      {canVote ? (
-                        <div className="flex gap-1.5 shrink-0">
-                          <button
-                            onClick={() => toggleVote(cat.id, 'prediction', nominee.id)}
-                            title="Vai ganhar"
-                            className={`rounded-lg px-2.5 py-1.5 text-sm transition ${
-                              isPrediction ? 'bg-[#D4537E] text-white' : 'bg-zinc-700 text-zinc-400 hover:bg-[#D4537E]/30 hover:text-[#D4537E]'
-                            }`}
-                          >
-                            🎯
-                          </button>
-                          <button
-                            onClick={() => toggleVote(cat.id, 'wish', nominee.id)}
-                            title="Deveria ganhar"
-                            className={`rounded-lg px-2.5 py-1.5 text-sm transition ${
-                              isWish ? 'bg-[#7F77DD] text-white' : 'bg-zinc-700 text-zinc-400 hover:bg-[#7F77DD]/30 hover:text-[#7F77DD]'
-                            }`}
-                          >
-                            💜
-                          </button>
-                        </div>
-                      ) : (isPrediction || isWish) ? (
-                        <div className="shrink-0 flex gap-1">
-                          {isPrediction && <span className="text-[#D4537E] text-sm">🎯</span>}
-                          {isWish       && <span className="text-[#7F77DD] text-sm">💜</span>}
-                        </div>
-                      ) : null}
+              return (
+                <div key={cat.id} className="rounded-xl bg-zinc-900/60 border border-zinc-800 overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+                    <h3 className="font-semibold text-zinc-100 text-sm">{cat.name}</h3>
+                    <div className="flex items-center gap-2">
+                      {isSaved && <span className="text-xs text-[#1D9E75]">✓</span>}
+                      <span className="text-xs text-zinc-500">
+                        {cat.vote_count} {cat.vote_count === 1 ? 'voto' : 'votos'}
+                      </span>
                     </div>
-                  )
-                })}
-              </div>
+                  </div>
 
-              {canVote && (
-                <button
-                  onClick={() => onSave(cat.id)}
-                  disabled={isSaving || !votes.prediction}
-                  className={`w-full mt-1 rounded-xl py-2.5 text-sm font-semibold transition ${
-                    isSaved
-                      ? 'bg-[#1D9E75]/20 text-[#1D9E75] border border-[#1D9E75]/30 hover:bg-[#1D9E75]/30'
-                      : 'bg-[#D4537E] text-white hover:bg-[#c44370] disabled:opacity-40 disabled:cursor-not-allowed'
-                  }`}
-                >
-                  {isSaving ? 'Salvando...' : isSaved ? '✓ Voto salvo — alterar' : 'Salvar votos'}
-                </button>
-              )}
-            </div>
+                  <div className="p-3 space-y-2">
+                    {canVote && cat.nominees.length > 0 && (
+                      <div className="flex gap-4 text-xs text-zinc-500 pb-1">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-[#D4537E] inline-block" />
+                          🎯 Vai ganhar
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-[#7F77DD] inline-block" />
+                          💜 Deveria ganhar (opcional)
+                        </span>
+                      </div>
+                    )}
+
+                    {cat.nominees.length === 0 ? (
+                      <p className="text-xs text-zinc-600 text-center py-3">Indicados ainda não cadastrados</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {cat.nominees.map(nominee => {
+                          const isPrediction = votes.prediction === nominee.id
+                          const isWish       = votes.wish       === nominee.id
+                          return (
+                            <div
+                              key={nominee.id}
+                              className={`flex items-center gap-3 rounded-xl border p-2.5 transition-colors ${
+                                isPrediction ? 'border-[#D4537E] bg-[#D4537E]/10' :
+                                isWish       ? 'border-[#7F77DD] bg-[#7F77DD]/10' :
+                                               'border-zinc-700 bg-zinc-800/40'
+                              }`}
+                            >
+                              <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-zinc-700 flex items-center justify-center">
+                                {nominee.cover_url
+                                  ? (/* eslint-disable-next-line @next/next/no-img-element */
+                                    <img src={nominee.cover_url} alt={nominee.name} className="w-full h-full object-cover" />)
+                                  : <span className="text-zinc-500 text-lg">🎵</span>
+                                }
+                              </div>
+
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-zinc-100 truncate">{nominee.name}</p>
+                                {nominee.artist && <p className="text-xs text-zinc-500 truncate">{nominee.artist}</p>}
+                              </div>
+
+                              {canVote ? (
+                                <div className="flex gap-1.5 shrink-0">
+                                  <button
+                                    onClick={() => toggleVote(cat.id, 'prediction', nominee.id)}
+                                    title="Vai ganhar"
+                                    className={`rounded-lg px-2.5 py-1.5 text-sm transition ${
+                                      isPrediction ? 'bg-[#D4537E] text-white' : 'bg-zinc-700 text-zinc-400 hover:bg-[#D4537E]/30 hover:text-[#D4537E]'
+                                    }`}
+                                  >
+                                    🎯
+                                  </button>
+                                  <button
+                                    onClick={() => toggleVote(cat.id, 'wish', nominee.id)}
+                                    title="Deveria ganhar"
+                                    className={`rounded-lg px-2.5 py-1.5 text-sm transition ${
+                                      isWish ? 'bg-[#7F77DD] text-white' : 'bg-zinc-700 text-zinc-400 hover:bg-[#7F77DD]/30 hover:text-[#7F77DD]'
+                                    }`}
+                                  >
+                                    💜
+                                  </button>
+                                </div>
+                              ) : (isPrediction || isWish) ? (
+                                <div className="shrink-0 flex gap-1">
+                                  {isPrediction && <span className="text-[#D4537E] text-sm">🎯</span>}
+                                  {isWish       && <span className="text-[#7F77DD] text-sm">💜</span>}
+                                </div>
+                              ) : null}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+
+                    {canVote && cat.nominees.length > 0 && (
+                      <button
+                        onClick={() => onSave(cat.id)}
+                        disabled={isSaving || !votes.prediction}
+                        className={`w-full mt-1 rounded-xl py-2.5 text-sm font-semibold transition ${
+                          isSaved
+                            ? 'bg-[#1D9E75]/20 text-[#1D9E75] border border-[#1D9E75]/30 hover:bg-[#1D9E75]/30'
+                            : 'bg-[#D4537E] text-white hover:bg-[#c44370] disabled:opacity-40 disabled:cursor-not-allowed'
+                        }`}
+                      >
+                        {isSaving ? 'Salvando...' : isSaved ? '✓ Voto salvo — alterar' : 'Salvar'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
           </div>
-        )
-      })}
+        </div>
+      ))}
+
+      {/* Save all — bottom repeat for long lists */}
+      {canVote && pendingCount > 0 && (
+        <button
+          onClick={onSaveAll}
+          disabled={savingAll}
+          className="w-full rounded-xl bg-[#7F77DD] text-white py-3 text-sm font-semibold hover:bg-[#6e67cc] disabled:opacity-50 transition"
+        >
+          {savingAll ? 'Salvando...' : `💾 Salvar ${pendingCount} voto${pendingCount !== 1 ? 's' : ''} pendente${pendingCount !== 1 ? 's' : ''}`}
+        </button>
+      )}
     </div>
   )
 }
@@ -341,158 +488,166 @@ function VoteSection({
 // ─── ResultsSection ───────────────────────────────────────────────────────────
 
 function ResultsSection({
-  categories, userVotes, currentUserId,
+  categories, userVotes: uv, currentUserId,
 }: {
-  categories:   GrammyCategoryFull[]
-  userVotes:    Record<string, { prediction_nominee_id: string; wish_nominee_id: string | null }>
+  categories:    GrammyCategoryFull[]
+  userVotes:     Record<string, { prediction_nominee_id: string; wish_nominee_id: string | null }>
   currentUserId: string | null
 }) {
-  let correct = 0
-  const votedCount = Object.keys(userVotes).length
+  let correct    = 0
+  const votedCount = Object.keys(uv).length
   for (const cat of categories) {
-    if (cat.winner_nominee_id && userVotes[cat.id]?.prediction_nominee_id === cat.winner_nominee_id) {
-      correct++
-    }
+    if (cat.winner_nominee_id && uv[cat.id]?.prediction_nominee_id === cat.winner_nominee_id) correct++
   }
+
+  const sections = groupCategories(categories.filter(c => c.nominees.length > 0))
 
   return (
     <div className="space-y-4">
       {currentUserId && votedCount > 0 && (
         <div className="rounded-xl bg-zinc-900/60 border border-zinc-800 p-5 text-center">
           <p className="text-xs text-zinc-500 uppercase tracking-wide">Seu placar</p>
-          <p className="text-3xl font-bold text-zinc-100 mt-1">{correct * 10} <span className="text-lg font-normal text-zinc-400">pontos</span></p>
+          <p className="text-3xl font-bold text-zinc-100 mt-1">
+            {correct * 10} <span className="text-lg font-normal text-zinc-400">pontos</span>
+          </p>
           <p className="text-sm text-zinc-400 mt-1">
             Você acertou {correct} de {votedCount} {votedCount === 1 ? 'categoria' : 'categorias'}
           </p>
         </div>
       )}
 
-      {categories.map(cat => {
-        const winner           = cat.nominees.find(n => n.id === cat.winner_nominee_id)
-        const totalVotes       = cat.vote_count
-        const winnerPredCount  = winner ? (cat.prediction_counts[winner.id] ?? 0) : 0
-        const winnerPredPct    = totalVotes > 0 ? Math.round((winnerPredCount / totalVotes) * 100) : 0
+      {sections.map(section => (
+        <div key={section.label}>
+          <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-500 px-1 mb-2">{section.label}</h2>
+          <div className="space-y-3">
+            {section.categories.map(cat => {
+              const winner          = cat.nominees.find(n => n.id === cat.winner_nominee_id)
+              const totalVotes      = cat.vote_count
+              const winnerPredCount = winner ? (cat.prediction_counts[winner.id] ?? 0) : 0
+              const winnerPredPct   = totalVotes > 0 ? Math.round((winnerPredCount / totalVotes) * 100) : 0
 
-        const topPredId   = Object.entries(cat.prediction_counts).sort((a, b) => b[1] - a[1])[0]?.[0]
-        const topWishId   = Object.entries(cat.wish_counts).sort((a, b) => b[1] - a[1])[0]?.[0]
-        const topPredName = cat.nominees.find(n => n.id === topPredId)?.name
-        const topWishName = cat.nominees.find(n => n.id === topWishId)?.name
+              const topPredId   = Object.entries(cat.prediction_counts).sort((a, b) => b[1] - a[1])[0]?.[0]
+              const topWishId   = Object.entries(cat.wish_counts).sort((a, b) => b[1] - a[1])[0]?.[0]
+              const topPredName = cat.nominees.find(n => n.id === topPredId)?.name
+              const topWishName = cat.nominees.find(n => n.id === topWishId)?.name
 
-        const communityPredictedRight  = !!winner && topPredId === winner.id
-        const communityWantedWinner    = !!winner && topWishId === winner.id
+              const communityPredRight = !!winner && topPredId === winner.id
+              const communityWantWin   = !!winner && topWishId === winner.id
 
-        let insightMsg = ''
-        if (communityPredictedRight && communityWantedWinner)   insightMsg = 'A comunidade acertou e queria isso mesmo! 🎉'
-        else if (communityPredictedRight && !communityWantedWinner) insightMsg = 'A comunidade sabia mas queria outro resultado 💔'
+              let insightMsg = ''
+              if (communityPredRight && communityWantWin)    insightMsg = 'A comunidade acertou e queria isso mesmo! 🎉'
+              else if (communityPredRight && !communityWantWin) insightMsg = 'A comunidade sabia mas queria outro resultado 💔'
 
-        return (
-          <div key={cat.id} className="rounded-xl bg-zinc-900/60 border border-zinc-800 overflow-hidden">
-            <div className="px-4 py-3 border-b border-zinc-800">
-              <h2 className="font-semibold text-zinc-100">{cat.name}</h2>
-            </div>
-
-            <div className="p-4 space-y-3">
-              {/* Winner highlight */}
-              {winner && (
-                <div className="flex items-center gap-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30 p-3">
-                  <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-zinc-700 flex items-center justify-center">
-                    {winner.cover_url
-                      ? (/* eslint-disable-next-line @next/next/no-img-element */
-                        <img src={winner.cover_url} alt={winner.name} className="w-full h-full object-cover" />)
-                      : <span className="text-xl text-zinc-500">🎵</span>
-                    }
+              return (
+                <div key={cat.id} className="rounded-xl bg-zinc-900/60 border border-zinc-800 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-zinc-800">
+                    <h3 className="font-semibold text-zinc-100 text-sm">{cat.name}</h3>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-yellow-400 font-medium">🏆 Vencedor</p>
-                    <p className="font-semibold text-zinc-100 truncate">{winner.name}</p>
-                    {winner.artist && <p className="text-xs text-zinc-400 truncate">{winner.artist}</p>}
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-lg font-bold text-[#D4537E]">{winnerPredPct}%</p>
-                    <p className="text-xs text-zinc-500">previram</p>
-                  </div>
-                </div>
-              )}
 
-              {/* All nominees with bars */}
-              <div className="space-y-2">
-                {cat.nominees.map(nominee => {
-                  const predCount = cat.prediction_counts[nominee.id] ?? 0
-                  const wishCount = cat.wish_counts[nominee.id]       ?? 0
-                  const predPct   = totalVotes > 0 ? Math.round((predCount / totalVotes) * 100) : 0
-                  const wishPct   = totalVotes > 0 ? Math.round((wishCount / totalVotes) * 100) : 0
-                  const isWinner  = nominee.id === cat.winner_nominee_id
-                  const uPred     = userVotes[cat.id]?.prediction_nominee_id === nominee.id
-                  const uWish     = userVotes[cat.id]?.wish_nominee_id       === nominee.id
-
-                  return (
-                    <div key={nominee.id} className={`rounded-lg p-3 space-y-2 ${isWinner ? 'bg-yellow-500/5 border border-yellow-500/20' : 'bg-zinc-800/40'}`}>
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded overflow-hidden shrink-0 bg-zinc-700 flex items-center justify-center">
-                          {nominee.cover_url
+                  <div className="p-4 space-y-3">
+                    {winner ? (
+                      <div className="flex items-center gap-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30 p-3">
+                        <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-zinc-700 flex items-center justify-center">
+                          {winner.cover_url
                             ? (/* eslint-disable-next-line @next/next/no-img-element */
-                              <img src={nominee.cover_url} alt={nominee.name} className="w-full h-full object-cover" />)
-                            : <span className="text-sm text-zinc-500">🎵</span>
+                              <img src={winner.cover_url} alt={winner.name} className="w-full h-full object-cover" />)
+                            : <span className="text-xl text-zinc-500">🎵</span>
                           }
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {isWinner && <span className="text-yellow-400 text-xs">🏆</span>}
-                            <p className="text-sm font-medium text-zinc-100 truncate">{nominee.name}</p>
-                            {uPred && <span className="text-[#D4537E] text-xs shrink-0" title="Sua previsão">🎯</span>}
-                            {uWish && <span className="text-[#7F77DD] text-xs shrink-0" title="Seu desejo">💜</span>}
-                          </div>
-                          {nominee.artist && <p className="text-xs text-zinc-500 truncate">{nominee.artist}</p>}
+                          <p className="text-xs text-yellow-400 font-medium">🏆 Vencedor</p>
+                          <p className="font-semibold text-zinc-100 truncate">{winner.name}</p>
+                          {winner.artist && <p className="text-xs text-zinc-400 truncate">{winner.artist}</p>}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-lg font-bold text-[#D4537E]">{winnerPredPct}%</p>
+                          <p className="text-xs text-zinc-500">previram</p>
                         </div>
                       </div>
+                    ) : (
+                      <p className="text-xs text-zinc-600 text-center py-2">Vencedor não revelado</p>
+                    )}
 
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-zinc-700 rounded-full h-1.5">
-                            <div className="h-1.5 rounded-full bg-[#D4537E]" style={{ width: `${predPct}%` }} />
-                          </div>
-                          <span className="text-xs text-zinc-500 w-9 text-right">{predPct}%</span>
-                          <span className="text-xs">🎯</span>
-                        </div>
-                        {wishCount > 0 && (
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 bg-zinc-700 rounded-full h-1.5">
-                              <div className="h-1.5 rounded-full bg-[#7F77DD]" style={{ width: `${wishPct}%` }} />
+                    <div className="space-y-2">
+                      {cat.nominees.map(nominee => {
+                        const predCount = cat.prediction_counts[nominee.id] ?? 0
+                        const wishCount = cat.wish_counts[nominee.id]       ?? 0
+                        const predPct   = totalVotes > 0 ? Math.round((predCount / totalVotes) * 100) : 0
+                        const wishPct   = totalVotes > 0 ? Math.round((wishCount / totalVotes) * 100) : 0
+                        const isWinner  = nominee.id === cat.winner_nominee_id
+                        const myPred    = uv[cat.id]?.prediction_nominee_id === nominee.id
+                        const myWish    = uv[cat.id]?.wish_nominee_id       === nominee.id
+
+                        return (
+                          <div key={nominee.id} className={`rounded-lg p-3 space-y-2 ${isWinner ? 'bg-yellow-500/5 border border-yellow-500/20' : 'bg-zinc-800/40'}`}>
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded overflow-hidden shrink-0 bg-zinc-700 flex items-center justify-center">
+                                {nominee.cover_url
+                                  ? (/* eslint-disable-next-line @next/next/no-img-element */
+                                    <img src={nominee.cover_url} alt={nominee.name} className="w-full h-full object-cover" />)
+                                  : <span className="text-sm text-zinc-500">🎵</span>
+                                }
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {isWinner && <span className="text-yellow-400 text-xs">🏆</span>}
+                                  <p className="text-sm font-medium text-zinc-100 truncate">{nominee.name}</p>
+                                  {myPred && <span className="text-[#D4537E] text-xs shrink-0" title="Sua previsão">🎯</span>}
+                                  {myWish && <span className="text-[#7F77DD] text-xs shrink-0" title="Seu desejo">💜</span>}
+                                </div>
+                                {nominee.artist && <p className="text-xs text-zinc-500 truncate">{nominee.artist}</p>}
+                              </div>
                             </div>
-                            <span className="text-xs text-zinc-500 w-9 text-right">{wishPct}%</span>
-                            <span className="text-xs">💜</span>
+
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 bg-zinc-700 rounded-full h-1.5">
+                                  <div className="h-1.5 rounded-full bg-[#D4537E]" style={{ width: `${predPct}%` }} />
+                                </div>
+                                <span className="text-xs text-zinc-500 w-9 text-right">{predPct}%</span>
+                                <span className="text-xs">🎯</span>
+                              </div>
+                              {wishCount > 0 && (
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 bg-zinc-700 rounded-full h-1.5">
+                                    <div className="h-1.5 rounded-full bg-[#7F77DD]" style={{ width: `${wishPct}%` }} />
+                                  </div>
+                                  <span className="text-xs text-zinc-500 w-9 text-right">{wishPct}%</span>
+                                  <span className="text-xs">💜</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+
+                    {totalVotes > 0 && topPredName && (
+                      <div className="rounded-lg bg-zinc-800/50 p-3 space-y-1.5 text-sm">
+                        <div className="flex items-start gap-2 text-zinc-300">
+                          <span className="shrink-0">🎯</span>
+                          <span>Previsão da comunidade: <span className="font-medium text-white">{topPredName}</span></span>
+                        </div>
+                        {topWishName && topWishId !== topPredId && (
+                          <div className="flex items-start gap-2 text-zinc-300">
+                            <span className="shrink-0">💜</span>
+                            <span>Favorito da comunidade: <span className="font-medium text-white">{topWishName}</span></span>
                           </div>
                         )}
+                        {insightMsg && (
+                          <p className={`text-xs pt-1.5 border-t border-zinc-700 ${communityPredRight && communityWantWin ? 'text-[#1D9E75]' : 'text-zinc-400'}`}>
+                            {insightMsg}
+                          </p>
+                        )}
                       </div>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Community insights */}
-              {totalVotes > 0 && topPredName && (
-                <div className="rounded-lg bg-zinc-800/50 p-3 space-y-1.5 text-sm">
-                  <div className="flex items-start gap-2 text-zinc-300">
-                    <span className="shrink-0">🎯</span>
-                    <span>Previsão da comunidade: <span className="font-medium text-white">{topPredName}</span></span>
+                    )}
                   </div>
-                  {topWishName && topWishId !== topPredId && (
-                    <div className="flex items-start gap-2 text-zinc-300">
-                      <span className="shrink-0">💜</span>
-                      <span>Favorito da comunidade: <span className="font-medium text-white">{topWishName}</span></span>
-                    </div>
-                  )}
-                  {insightMsg && (
-                    <p className={`text-xs pt-1.5 border-t border-zinc-700 ${communityPredictedRight && communityWantedWinner ? 'text-[#1D9E75]' : 'text-zinc-400'}`}>
-                      {insightMsg}
-                    </p>
-                  )}
                 </div>
-              )}
-            </div>
+              )
+            })}
           </div>
-        )
-      })}
+        </div>
+      ))}
     </div>
   )
 }
@@ -552,7 +707,7 @@ function RankingSection({ ranking, currentUserId }: { ranking: GrammyRankingEntr
 
 // ─── AdminPanel ───────────────────────────────────────────────────────────────
 
-type AdminSection = 'main' | 'new-edition' | 'add-category' | 'add-nominee' | 'reveal' | 'delete-nominee'
+type AdminSection = 'main' | 'new-edition' | 'add-category' | 'add-nominee' | 'categories' | 'reveal' | 'delete-nominee'
 
 function AdminPanel({
   edition, allEditions, categories, onRefresh,
@@ -575,16 +730,17 @@ function AdminPanel({
   const [nomArtist,    setNomArtist]    = useState('')
   const [nomCover,     setNomCover]     = useState('')
   const [revealMap,    setRevealMap]    = useState<Record<string, string>>({})
+  const [toggling,     setToggling]     = useState<string | null>(null)
 
   function flash(m: string) { setMsg(m); setTimeout(() => setMsg(''), 4000) }
 
   async function handleCreateEdition() {
     if (!year || !ceremonyDate) return flash('Preencha ano e data')
     setSaving(true)
-    const r = await createGrammyEdition(parseInt(year), ceremonyDate)
+    const r = await createGrammyEditionWithCategories(parseInt(year), ceremonyDate)
     setSaving(false)
     if (r.error) return flash(r.error)
-    flash('Edição criada!')
+    flash('Edição criada com 50 categorias!')
     setYear(''); setCeremonyDate(''); setSection('main')
     onRefresh()
   }
@@ -592,7 +748,7 @@ function AdminPanel({
   async function handleAddCategory() {
     if (!edition || !catName.trim()) return flash('Preencha o nome da categoria')
     setSaving(true)
-    const r = await addGrammyCategory(edition.id, catName.trim(), categories.length)
+    const r = await addGrammyCategory(edition.id, catName.trim(), categories.length + 51)
     setSaving(false)
     if (r.error) return flash(r.error)
     flash('Categoria adicionada!')
@@ -631,7 +787,15 @@ function AdminPanel({
     const r = await revealGrammyWinners(edition.id, winners)
     setSaving(false)
     if (r.error) return flash(r.error)
-    flash('Vencedores revelados!')
+    flash('Vencedores revelados e pontuações computadas!')
+    onRefresh()
+  }
+
+  async function handleToggleCategory(catId: string, current: boolean) {
+    setToggling(catId)
+    const r = await toggleCategoryActive(catId, !current)
+    setToggling(null)
+    if (r.error) return flash(r.error)
     onRefresh()
   }
 
@@ -655,6 +819,9 @@ function AdminPanel({
     onRefresh()
   }
 
+  const activeCount   = categories.filter(c => c.is_active).length
+  const inactiveCount = categories.length - activeCount
+
   return (
     <div className="rounded-xl border border-zinc-700 bg-zinc-900/40">
       <button
@@ -674,12 +841,14 @@ function AdminPanel({
           {edition && (
             <p className="text-xs text-zinc-500">
               Grammy {edition.year} · status: <span className="text-zinc-300">{edition.status}</span>
+              {' · '}{activeCount} categorias ativas{inactiveCount > 0 ? `, ${inactiveCount} inativas` : ''}
             </p>
           )}
 
           {/* Quick actions */}
           <div className="flex flex-wrap gap-2">
             <ABtn onClick={() => setSection('new-edition')}>+ Nova Edição</ABtn>
+            {edition && <ABtn onClick={() => setSection('categories')}>📋 Categorias ({activeCount}/{categories.length})</ABtn>}
             {edition && <ABtn onClick={() => setSection('add-category')}>+ Categoria</ABtn>}
             {edition && categories.length > 0 && <ABtn onClick={() => setSection('add-nominee')}>+ Indicado</ABtn>}
             {edition && categories.length > 0 && <ABtn onClick={() => setSection('delete-nominee')}>🗑 Remover</ABtn>}
@@ -691,32 +860,68 @@ function AdminPanel({
             )}
           </div>
 
-          {/* New edition */}
+          {/* ── New edition ── */}
           {section === 'new-edition' && (
             <div className="space-y-2 border-t border-zinc-700 pt-3">
-              <p className="text-xs text-zinc-400 font-medium">Nova Edição</p>
+              <p className="text-xs text-zinc-400 font-medium">Nova Edição — 50 categorias serão criadas automaticamente</p>
               <input value={year} onChange={e => setYear(e.target.value)} type="number" placeholder="Ano (ex: 2027)" className={inputClass} />
               <input value={ceremonyDate} onChange={e => setCeremonyDate(e.target.value)} type="date" className={inputClass} />
-              <button onClick={handleCreateEdition} disabled={saving} className={btnClass}>{saving ? 'Criando...' : 'Criar Edição'}</button>
+              <button onClick={handleCreateEdition} disabled={saving} className={btnClass}>
+                {saving ? 'Criando...' : 'Criar Edição + 50 categorias'}
+              </button>
             </div>
           )}
 
-          {/* Add category */}
+          {/* ── Manage categories (toggle active) ── */}
+          {section === 'categories' && edition && (
+            <div className="space-y-2 border-t border-zinc-700 pt-3">
+              <p className="text-xs text-zinc-400 font-medium">Ativar / desativar categorias</p>
+              <div className="space-y-1 max-h-96 overflow-y-auto pr-1">
+                {categories.map(cat => (
+                  <div key={cat.id} className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 hover:bg-zinc-800 transition-colors">
+                    <span className={`text-sm flex-1 truncate ${cat.is_active ? 'text-zinc-200' : 'text-zinc-600 line-through'}`}>
+                      {cat.name}
+                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs text-zinc-600">{cat.nominees.length} ind.</span>
+                      <button
+                        onClick={() => handleToggleCategory(cat.id, cat.is_active)}
+                        disabled={toggling === cat.id}
+                        className={`relative inline-flex h-5 w-9 rounded-full transition-colors disabled:opacity-50 ${
+                          cat.is_active ? 'bg-[#1D9E75]' : 'bg-zinc-600'
+                        }`}
+                      >
+                        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                          cat.is_active ? 'translate-x-4' : 'translate-x-0.5'
+                        }`} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Add category ── */}
           {section === 'add-category' && edition && (
             <div className="space-y-2 border-t border-zinc-700 pt-3">
-              <p className="text-xs text-zinc-400 font-medium">Adicionar Categoria</p>
+              <p className="text-xs text-zinc-400 font-medium">Adicionar Categoria Personalizada</p>
               <input value={catName} onChange={e => setCatName(e.target.value)} placeholder="Ex: Álbum do Ano" className={inputClass} />
               <button onClick={handleAddCategory} disabled={saving} className={btnClass}>{saving ? 'Adicionando...' : 'Adicionar'}</button>
             </div>
           )}
 
-          {/* Add nominee */}
+          {/* ── Add nominee ── */}
           {section === 'add-nominee' && (
             <div className="space-y-2 border-t border-zinc-700 pt-3">
               <p className="text-xs text-zinc-400 font-medium">Adicionar Indicado</p>
               <select value={selCatId} onChange={e => setSelCatId(e.target.value)} className={inputClass}>
                 <option value="">Selecione a categoria</option>
-                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.is_active ? '' : '[inativa] '}{c.name} ({c.nominees.length} indicados)
+                  </option>
+                ))}
               </select>
               <input value={nomName} onChange={e => setNomName(e.target.value)} placeholder="Nome (ex: Short n' Sweet)" className={inputClass} />
               <input value={nomArtist} onChange={e => setNomArtist(e.target.value)} placeholder="Artista (opcional)" className={inputClass} />
@@ -725,61 +930,71 @@ function AdminPanel({
             </div>
           )}
 
-          {/* Delete nominees */}
+          {/* ── Delete nominees/categories ── */}
           {section === 'delete-nominee' && (
             <div className="space-y-3 border-t border-zinc-700 pt-3">
               <p className="text-xs text-zinc-400 font-medium">Remover categoria ou indicado</p>
-              {categories.map(cat => (
-                <div key={cat.id} className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs text-zinc-300 font-medium flex-1">{cat.name}</p>
-                    <button onClick={() => handleDeleteCategory(cat.id)} disabled={saving} className="text-xs text-red-400 hover:text-red-300">apagar cat.</button>
-                  </div>
-                  {cat.nominees.map(n => (
-                    <div key={n.id} className="flex items-center gap-2 pl-2">
-                      <span className="text-xs text-zinc-500 flex-1 truncate">{n.name}</span>
-                      <button onClick={() => handleDeleteNominee(n.id, n.name)} disabled={saving} className="text-xs text-red-400 hover:text-red-300 shrink-0">×</button>
+              <div className="max-h-96 overflow-y-auto space-y-2">
+                {categories.map(cat => (
+                  <div key={cat.id} className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-zinc-300 font-medium flex-1 truncate">{cat.name}</p>
+                      <button onClick={() => handleDeleteCategory(cat.id)} disabled={saving} className="text-xs text-red-400 hover:text-red-300 shrink-0">apagar</button>
                     </div>
-                  ))}
-                </div>
-              ))}
+                    {cat.nominees.map(n => (
+                      <div key={n.id} className="flex items-center gap-2 pl-2">
+                        <span className="text-xs text-zinc-500 flex-1 truncate">{n.name}</span>
+                        <button onClick={() => handleDeleteNominee(n.id, n.name)} disabled={saving} className="text-xs text-red-400 hover:text-red-300 shrink-0">×</button>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
-          {/* Reveal winners */}
+          {/* ── Reveal winners ── */}
           {section === 'reveal' && edition && (
             <div className="space-y-3 border-t border-zinc-700 pt-3">
-              <p className="text-xs text-zinc-400 font-medium">Selecione os vencedores</p>
-              {categories.map(cat => (
-                <div key={cat.id} className="space-y-1">
-                  <p className="text-xs text-zinc-300 font-medium">{cat.name}</p>
-                  <select
-                    value={revealMap[cat.id] ?? ''}
-                    onChange={e => setRevealMap(prev => ({ ...prev, [cat.id]: e.target.value }))}
-                    className={inputClass}
-                  >
-                    <option value="">Selecione o vencedor</option>
-                    {cat.nominees.map(n => (
-                      <option key={n.id} value={n.id}>{n.name}{n.artist ? ` — ${n.artist}` : ''}</option>
-                    ))}
-                  </select>
-                </div>
-              ))}
+              <p className="text-xs text-zinc-400 font-medium">Selecione os vencedores (pontuação computada automaticamente)</p>
+              <div className="max-h-96 overflow-y-auto space-y-2">
+                {categories.filter(c => c.is_active && c.nominees.length > 0).map(cat => (
+                  <div key={cat.id} className="space-y-1">
+                    <p className="text-xs text-zinc-300 font-medium">{cat.name}</p>
+                    <select
+                      value={revealMap[cat.id] ?? ''}
+                      onChange={e => setRevealMap(prev => ({ ...prev, [cat.id]: e.target.value }))}
+                      className={inputClass}
+                    >
+                      <option value="">Selecione o vencedor</option>
+                      {cat.nominees.map(n => (
+                        <option key={n.id} value={n.id}>{n.name}{n.artist ? ` — ${n.artist}` : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
               <button onClick={handleReveal} disabled={saving} className={btnClass}>
-                {saving ? 'Revelando...' : '🏆 Revelar Vencedores'}
+                {saving ? 'Revelando...' : '🏆 Revelar Vencedores + Computar Pontuação'}
               </button>
             </div>
           )}
 
-          {/* Category overview */}
-          {categories.length > 0 && section === 'main' && (
+          {/* ── Main overview ── */}
+          {section === 'main' && categories.length > 0 && (
             <div className="space-y-1 border-t border-zinc-700 pt-3">
-              <p className="text-xs text-zinc-500">{categories.length} categorias</p>
-              {categories.map(cat => (
-                <p key={cat.id} className="text-xs text-zinc-400">
-                  {cat.name} <span className="text-zinc-600">({cat.nominees.length} indicados, {cat.vote_count} votos)</span>
+              <p className="text-xs text-zinc-500">{categories.length} categorias totais · {activeCount} ativas</p>
+              {categories.filter(c => c.nominees.length > 0).map(cat => (
+                <p key={cat.id} className={`text-xs ${cat.is_active ? 'text-zinc-400' : 'text-zinc-600'}`}>
+                  {cat.is_active ? '' : '○ '}{cat.name}{' '}
+                  <span className="text-zinc-600">({cat.nominees.length} ind., {cat.vote_count} votos)</span>
                 </p>
               ))}
+              {categories.filter(c => c.nominees.length === 0).length > 0 && (
+                <p className="text-xs text-zinc-600 pt-1">
+                  + {categories.filter(c => c.nominees.length === 0).length} categorias sem indicados
+                </p>
+              )}
             </div>
           )}
 
@@ -796,6 +1011,8 @@ function AdminPanel({
     </div>
   )
 }
+
+// ─── Shared styles ────────────────────────────────────────────────────────────
 
 const inputClass = 'w-full rounded-lg bg-zinc-800 px-3 py-2 text-sm text-zinc-100 border border-zinc-700 focus:outline-none focus:border-[#D4537E]'
 const btnClass   = 'w-full rounded-xl bg-[#D4537E] text-white py-2.5 text-sm font-semibold hover:bg-[#c44370] disabled:opacity-50 transition'

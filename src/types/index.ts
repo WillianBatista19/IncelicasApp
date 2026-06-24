@@ -256,6 +256,7 @@ export interface GrammyCategory {
   edition_id:        string
   name:              string
   display_order:     number
+  is_active:         boolean
   winner_nominee_id: string | null
   created_at:        string
 }

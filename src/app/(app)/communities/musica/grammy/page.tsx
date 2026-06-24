@@ -9,6 +9,7 @@ export interface GrammyCategoryFull {
   id:                string
   name:              string
   display_order:     number
+  is_active:         boolean
   winner_nominee_id: string | null
   nominees:          GrammyNominee[]
   vote_count:        number
@@ -63,11 +64,11 @@ export default async function GrammyPage() {
   if (edition) {
     const { data: catsRaw } = await supabase
       .from('grammy_categories')
-      .select('id, name, display_order, winner_nominee_id')
+      .select('id, name, display_order, is_active, winner_nominee_id')
       .eq('edition_id', edition.id)
       .order('display_order')
 
-    const cats = (catsRaw ?? []) as { id: string; name: string; display_order: number; winner_nominee_id: string | null }[]
+    const cats = (catsRaw ?? []) as { id: string; name: string; display_order: number; is_active: boolean; winner_nominee_id: string | null }[]
     const catIds = cats.map(c => c.id)
 
     const [nomineesRes, allVotesRes] = await Promise.all([
@@ -109,6 +110,7 @@ export default async function GrammyPage() {
       id:                cat.id,
       name:              cat.name,
       display_order:     cat.display_order,
+      is_active:         cat.is_active,
       winner_nominee_id: cat.winner_nominee_id,
       nominees:          nominees.filter(n => n.category_id === cat.id),
       vote_count:        votedUsers[cat.id]?.size ?? 0,
