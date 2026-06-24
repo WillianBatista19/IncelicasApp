@@ -276,7 +276,7 @@ export default function AlbumRatingClient({
     return (
       <div className="text-center py-12 space-y-4">
         <p className="text-4xl">🎵</p>
-        <p className="text-xl font-bold text-white">
+        <p className="text-xl font-bold text-zinc-100">
           {hasExisting ? 'Avaliação atualizada!' : 'Avaliação salva!'}
         </p>
         <div className="flex justify-center gap-3 flex-wrap">
@@ -326,7 +326,7 @@ export default function AlbumRatingClient({
             <div className="w-[72px] h-[72px] rounded-xl bg-[#7F77DD]/30 flex items-center justify-center text-3xl shrink-0">🎵</div>
           )}
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-bold text-white leading-tight">{selectedAlbum.name}</h2>
+            <h2 className="text-base font-bold text-zinc-100 leading-tight">{selectedAlbum.name}</h2>
             <p className="text-sm text-zinc-400">{selectedAlbum.artist}</p>
             <p className="text-xs text-zinc-600 mt-0.5">{selectedAlbum.year} · {selectedAlbum.totalTracks} faixas</p>
           </div>
@@ -354,7 +354,7 @@ export default function AlbumRatingClient({
         {/* Track list */}
         <div className="space-y-1.5">
           {selectedAlbum.tracks.map(track => (
-            <div key={track.id} className="rounded-xl bg-white/5 px-3 pt-3 pb-2 space-y-2">
+            <div key={track.id} className="rounded-xl bg-zinc-900/60 border border-zinc-800 px-3 pt-3 pb-2 space-y-2">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-zinc-600 w-5 shrink-0 text-right">{track.track_number}</span>
                 <span className="flex-1 text-sm text-zinc-200 truncate">{track.name}</span>
@@ -372,7 +372,7 @@ export default function AlbumRatingClient({
                     const clamped = num > 10 ? '10' : num < 0 ? '0' : raw
                     setScores(prev => ({ ...prev, [track.id]: clamped }))
                   }}
-                  className="w-16 rounded-lg bg-white/10 px-2 py-1 text-center text-sm text-white placeholder-zinc-700 focus:outline-none focus:ring-1 focus:ring-[#D4537E] shrink-0"
+                  className="w-16 rounded-lg bg-zinc-800/60 border border-zinc-800 px-2 py-1 text-center text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-[#D4537E] shrink-0"
                 />
               </div>
               <div className="flex gap-1.5 pl-7">
@@ -423,7 +423,7 @@ export default function AlbumRatingClient({
         placeholder="🔍  Pesquise um álbum..."
         value={query}
         onChange={e => setQuery(e.target.value)}
-        className="w-full rounded-xl bg-white/10 px-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#D4537E]"
+        className="w-full rounded-xl bg-zinc-800/60 border border-zinc-800 px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#D4537E]"
       />
 
       {/* Search results */}
@@ -437,7 +437,7 @@ export default function AlbumRatingClient({
             <button
               key={item.id}
               onClick={() => selectAlbum(item)}
-              className="w-full flex items-center gap-3 rounded-xl bg-white/5 p-3 text-left hover:bg-white/10 transition-colors"
+              className="w-full flex items-center gap-3 rounded-xl bg-zinc-900/60 border border-zinc-800 p-3 text-left hover:bg-zinc-800/60 transition-colors"
             >
               {item.cover ? (
                 <Image src={item.cover} alt={item.name} width={48} height={48}
@@ -447,7 +447,7 @@ export default function AlbumRatingClient({
                 <div className="w-12 h-12 rounded-lg bg-zinc-800 flex items-center justify-center text-xl shrink-0">🎵</div>
               )}
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-white truncate">{item.name}</p>
+                <p className="text-sm font-semibold text-zinc-100 truncate">{item.name}</p>
                 <p className="text-xs text-zinc-400">{item.artist}</p>
                 <p className="text-xs text-zinc-600">{item.year} · {item.totalTracks} faixas</p>
               </div>
@@ -470,7 +470,7 @@ export default function AlbumRatingClient({
                   <Link
                     key={album.album_id}
                     href={`/communities/musica/avaliar/${album.album_id}`}
-                    className="flex items-center gap-3 rounded-xl bg-white/5 p-3 hover:bg-white/10 transition-colors"
+                    className="flex items-center gap-3 rounded-xl bg-zinc-900/60 border border-zinc-800 p-3 hover:bg-zinc-800/60 transition-colors"
                   >
                     <span className="text-sm font-bold text-zinc-600 w-5 shrink-0 text-right">{i + 1}</span>
                     {album.cover_url ? (
@@ -481,7 +481,7 @@ export default function AlbumRatingClient({
                       <div className="w-10 h-10 rounded-lg bg-zinc-800 shrink-0" />
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-white truncate">{album.album_name}</p>
+                      <p className="text-sm font-semibold text-zinc-100 truncate">{album.album_name}</p>
                       <p className="text-xs text-zinc-400 truncate">{album.artist_name}</p>
                     </div>
                     <div className="shrink-0 text-right">
@@ -504,7 +504,7 @@ export default function AlbumRatingClient({
                   <Link
                     key={i}
                     href={`/communities/musica/avaliar/${r.album_id}`}
-                    className="flex items-center gap-3 rounded-xl bg-white/5 p-3 hover:bg-white/10 transition-colors"
+                    className="flex items-center gap-3 rounded-xl bg-zinc-900/60 border border-zinc-800 p-3 hover:bg-zinc-800/60 transition-colors"
                   >
                     {r.cover_url ? (
                       <Image src={r.cover_url} alt={r.album_name} width={40} height={40}
@@ -514,7 +514,7 @@ export default function AlbumRatingClient({
                       <div className="w-10 h-10 rounded-lg bg-zinc-800 shrink-0" />
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-white truncate">{r.album_name}</p>
+                      <p className="text-sm font-semibold text-zinc-100 truncate">{r.album_name}</p>
                       <p className="text-xs text-zinc-400">{r.display_name ?? r.username} · {r.artist_name}</p>
                     </div>
                     {r.overall_score != null && (
@@ -536,7 +536,7 @@ export default function AlbumRatingClient({
                   <Link
                     key={album.album_id}
                     href={`/communities/musica/avaliar/${album.album_id}`}
-                    className="flex items-center gap-3 rounded-xl bg-white/5 p-3 hover:bg-white/10 transition-colors"
+                    className="flex items-center gap-3 rounded-xl bg-zinc-900/60 border border-zinc-800 p-3 hover:bg-zinc-800/60 transition-colors"
                   >
                     {album.cover_url ? (
                       <Image src={album.cover_url} alt={album.album_name} width={40} height={40}
@@ -546,7 +546,7 @@ export default function AlbumRatingClient({
                       <div className="w-10 h-10 rounded-lg bg-zinc-800 shrink-0" />
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-white truncate">{album.album_name}</p>
+                      <p className="text-sm font-semibold text-zinc-100 truncate">{album.album_name}</p>
                       <p className="text-xs text-zinc-400">{album.artist_name}</p>
                     </div>
                     <div className="shrink-0 text-right">

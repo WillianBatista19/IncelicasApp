@@ -53,7 +53,7 @@ export default function MembersTab({ communityId, members: initial, currentUserI
         const isMe = m.user_id === currentUserId
 
         return (
-          <div key={m.user_id} className="flex items-center gap-3 rounded-xl bg-white/5 p-3">
+          <div key={m.user_id} className="flex items-center gap-3 rounded-xl bg-zinc-900/60 border border-zinc-800 p-3">
             <Link href={`/profile/${profile.username}`} className="overflow-hidden rounded-full flex-shrink-0">
               {profile.avatar_url ? (
                 <Image
@@ -70,7 +70,7 @@ export default function MembersTab({ communityId, members: initial, currentUserI
             </Link>
 
             <div className="flex-1 min-w-0">
-              <Link href={`/profile/${profile.username}`} className="text-sm font-semibold text-white hover:underline">
+              <Link href={`/profile/${profile.username}`} className="text-sm font-semibold text-zinc-100 hover:underline">
                 {profile.display_name ?? profile.username}
               </Link>
               <p className="text-xs text-zinc-500">@{profile.username}</p>

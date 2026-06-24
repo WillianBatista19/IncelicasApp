@@ -58,14 +58,14 @@ export default function CommunityPostCard({ post, currentUserId, isOwnerOrMod }:
   }
 
   return (
-    <article className="rounded-xl bg-white/5 p-4 space-y-3">
+    <article className="rounded-xl bg-zinc-900/60 border border-zinc-800 p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
           <Link href={`/profile/${profile.username}`}>
             <Avatar src={profile.avatar_url} name={profile.display_name ?? profile.username} size="sm" />
           </Link>
           <div>
-            <Link href={`/profile/${profile.username}`} className="text-sm font-semibold text-white hover:underline">
+            <Link href={`/profile/${profile.username}`} className="text-sm font-semibold text-zinc-100 hover:underline">
               {profile.display_name ?? profile.username}
             </Link>
             <p className="text-xs text-zinc-500">@{profile.username} · {formatTimeAgo(post.created_at)}</p>

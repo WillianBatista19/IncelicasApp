@@ -2,11 +2,24 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import WordGame    from '@/components/games/WordGame'
-import MusicGame   from '@/components/games/MusicGame'
-import GameRanking from '@/components/games/GameRanking'
+import WordGame     from '@/components/games/WordGame'
+import MusicGame    from '@/components/games/MusicGame'
+import ContextoGame from '@/components/games/ContextoGame'
+import GameRanking  from '@/components/games/GameRanking'
 
-type Tab = 'word' | 'music'
+type Tab = 'word' | 'music' | 'contexto'
+
+const TAB_CONFIG: Record<Tab, { label: string; color: string; activeColor: string; badge: string }> = {
+  word:     { label: '📝 Termo',    color: 'text-zinc-500 hover:text-zinc-300', activeColor: 'bg-[#7F77DD] text-white shadow-sm', badge: '6 tentativas' },
+  music:    { label: '🎵 Música',   color: 'text-zinc-500 hover:text-zinc-300', activeColor: 'bg-[#D4537E] text-white shadow-sm', badge: '6 trechos'    },
+  contexto: { label: '🧠 Contexto', color: 'text-zinc-500 hover:text-zinc-300', activeColor: 'bg-[#1D9E75] text-white shadow-sm', badge: '∞ tentativas' },
+}
+
+const GAME_TITLE: Record<Tab, string> = {
+  word:     '📝 Termo das Incelicas',
+  music:    '🎵 Adivinhe a Música',
+  contexto: '🧠 Contexto',
+}
 
 export default function JogarClient({
   currentUserId,
@@ -43,42 +56,38 @@ export default function JogarClient({
 
       {/* Tab switcher */}
       <div className="flex gap-1 rounded-2xl bg-zinc-900 p-1">
-        <button
-          onClick={() => setTab('word')}
-          className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors ${
-            tab === 'word'
-              ? 'bg-[#7F77DD] text-white shadow-sm'
-              : 'text-zinc-500 hover:text-zinc-300'
-          }`}
-        >
-          📝 Termo das Incelicas
-        </button>
-        <button
-          onClick={() => setTab('music')}
-          className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors ${
-            tab === 'music'
-              ? 'bg-[#D4537E] text-white shadow-sm'
-              : 'text-zinc-500 hover:text-zinc-300'
-          }`}
-        >
-          🎵 Adivinhe a Música
-        </button>
+        {(Object.keys(TAB_CONFIG) as Tab[]).map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`flex-1 rounded-xl py-2.5 text-xs font-semibold transition-colors sm:text-sm ${
+              tab === t ? TAB_CONFIG[t].activeColor : TAB_CONFIG[t].color
+            }`}
+          >
+            {TAB_CONFIG[t].label}
+          </button>
+        ))}
       </div>
 
       {/* Game card */}
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
         <div className="mb-4 flex items-center gap-2">
-          <span className="text-sm font-semibold text-zinc-100">
-            {tab === 'word' ? '📝 Termo das Incelicas' : '🎵 Adivinhe a Música'}
-          </span>
+          <span className="text-sm font-semibold text-zinc-100">{GAME_TITLE[tab]}</span>
           <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-xs text-zinc-500">
-            {tab === 'word' ? '6 tentativas' : '6 trechos'}
+            {TAB_CONFIG[tab].badge}
           </span>
         </div>
-        {tab === 'word'
-          ? <WordGame  currentUserId={currentUserId} />
-          : <MusicGame currentUserId={currentUserId} />
-        }
+
+        {tab === 'word'     && <WordGame     currentUserId={currentUserId} />}
+        {tab === 'music'    && <MusicGame    currentUserId={currentUserId} />}
+        {tab === 'contexto' && (
+          <div>
+            <p className="mb-4 text-xs text-zinc-500">
+              Encontre a palavra secreta por similaridade semântica. Quanto mais próxima do 100, mais perto você está!
+            </p>
+            <ContextoGame currentUserId={currentUserId} />
+          </div>
+        )}
       </div>
 
       {/* Ranking */}

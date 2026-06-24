@@ -85,13 +85,13 @@ export default function CommunityPostComposer({ communityId, currentUserId, onPo
   const canSubmit = (text.trim().length > 0 || !!imageFile || mediaUrl.trim().length > 0) && !loading
 
   return (
-    <form onSubmit={submit} className="rounded-xl bg-white/5 p-4 space-y-3">
+    <form onSubmit={submit} className="rounded-xl bg-zinc-900/60 border border-zinc-800 p-4 space-y-3">
       <textarea
         value={text}
         onChange={e => setText(e.target.value)}
         placeholder="Posta algo na comunidade…"
         rows={3}
-        className="w-full resize-none rounded-lg bg-white/5 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-[#D4537E]"
+        className="w-full resize-none rounded-lg bg-zinc-800/60 border border-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-[#D4537E]"
       />
 
       {imagePreview && (
@@ -121,7 +121,7 @@ export default function CommunityPostComposer({ communityId, currentUserId, onPo
           value={mediaUrl}
           onChange={e => setMediaUrl(e.target.value)}
           placeholder="Link do Spotify ou YouTube (opcional)"
-          className="w-full rounded-lg bg-white/5 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-[#D4537E]"
+          className="w-full rounded-lg bg-zinc-800/60 border border-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-[#D4537E]"
         />
       </div>
 

@@ -98,7 +98,7 @@ export default async function AvaliarPage({ searchParams }: { searchParams?: Sea
       </div>
 
       <div>
-        <h1 className="text-xl font-bold text-white">🎵 Avaliar Álbum</h1>
+        <h1 className="text-xl font-bold text-zinc-100">🎵 Avaliar Álbum</h1>
         <p className="text-sm text-zinc-500 mt-1">
           Avalie cada faixa de 0 a 10 e marque seus favoritos
         </p>

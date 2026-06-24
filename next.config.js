@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    serverComponentsExternalPackages: ['@xenova/transformers', 'onnxruntime-node'],
+  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '**.supabase.co' },

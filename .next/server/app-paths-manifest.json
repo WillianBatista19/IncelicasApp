@@ -1,5 +1,8 @@
 {
-  "/api/deezer/route": "app/api/deezer/route.js",
-  "/icon.svg/route": "app/icon.svg/route.js",
-  "/(app)/communities/musica/survivor/page": "app/(app)/communities/musica/survivor/page.js"
+  "/(app)/communities/[slug]/page": "app/(app)/communities/[slug]/page.js",
+  "/(app)/communities/musica/avaliar/page": "app/(app)/communities/musica/avaliar/page.js",
+  "/(app)/communities/musica/avaliar/[albumId]/page": "app/(app)/communities/musica/avaliar/[albumId]/page.js",
+  "/(app)/profile/[username]/page": "app/(app)/profile/[username]/page.js",
+  "/(app)/communities/musica/survivor/page": "app/(app)/communities/musica/survivor/page.js",
+  "/(app)/communities/page": "app/(app)/communities/page.js"
 }

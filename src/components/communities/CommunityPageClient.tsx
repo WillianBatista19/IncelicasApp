@@ -76,7 +76,7 @@ export default function CommunityPageClient({
       </Link>
 
       {/* Header */}
-      <div className="rounded-xl overflow-hidden bg-white/5">
+      <div className="rounded-xl overflow-hidden bg-zinc-900/60 border border-zinc-800">
         {community.banner_url && (
           <div
             className="h-32 w-full bg-cover bg-center"
@@ -105,7 +105,7 @@ export default function CommunityPageClient({
           )}
 
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-bold text-white">{community.name}</h1>
+            <h1 className="text-lg font-bold text-zinc-100">{community.name}</h1>
             {community.description && (
               <p className="text-sm text-zinc-400 mt-0.5">{community.description}</p>
             )}
@@ -144,7 +144,7 @@ export default function CommunityPageClient({
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-white/10">
+      <div className="flex gap-1 border-b border-zinc-800">
         {(['posts', 'members', ...(community.slug === 'musica' ? ['jogos' as Tab] : [])] as Tab[]).map(t => (
           <button
             key={t}
@@ -183,13 +183,13 @@ export default function CommunityPageClient({
         <div className="space-y-4">
           <Link
             href="/communities/musica/avaliar"
-            className="flex items-center gap-4 rounded-xl bg-white/5 p-4 hover:bg-white/10 transition-colors"
+            className="flex items-center gap-4 rounded-xl bg-zinc-900/60 border border-zinc-800 p-4 hover:bg-zinc-800/60 transition-colors"
           >
             <div className="w-14 h-14 rounded-xl bg-[#D4537E]/20 flex items-center justify-center text-3xl shrink-0">
               🎵
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-white">Avaliar Álbum</p>
+              <p className="font-semibold text-zinc-100">Avaliar Álbum</p>
               <p className="text-sm text-zinc-400 mt-0.5">
                 Dê nota para cada faixa, escolha seus favoritos e veja o ranking da comunidade
               </p>
@@ -199,13 +199,13 @@ export default function CommunityPageClient({
 
           <Link
             href="/communities/musica/survivor"
-            className="flex items-center gap-4 rounded-xl bg-white/5 p-4 hover:bg-white/10 transition-colors"
+            className="flex items-center gap-4 rounded-xl bg-zinc-900/60 border border-zinc-800 p-4 hover:bg-zinc-800/60 transition-colors"
           >
             <div className="w-14 h-14 rounded-xl bg-[#7F77DD]/20 flex items-center justify-center text-3xl shrink-0">
               🏆
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-white">Survivor Musical</p>
+              <p className="font-semibold text-zinc-100">Survivor Musical</p>
               {activeSurvivorEvent ? (
                 <p className="text-sm text-[#7F77DD] mt-0.5 truncate">
                   {activeSurvivorEvent.album_name} · Rodada {activeSurvivorEvent.current_round}

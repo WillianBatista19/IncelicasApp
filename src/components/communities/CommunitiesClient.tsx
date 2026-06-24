@@ -22,7 +22,7 @@ export default function CommunitiesClient({ communities, myMemberships, currentU
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-white">🏘️ Comunidades</h1>
+        <h1 className="text-xl font-bold text-zinc-100">🏘️ Comunidades</h1>
         {currentUserId && (
           <button
             onClick={() => setShowCreate(true)}
@@ -68,7 +68,7 @@ function CommunityCard({ community: c, isMember }: { community: Community; isMem
   return (
     <Link
       href={`/communities/${c.slug}`}
-      className="flex items-center gap-3 rounded-xl bg-white/5 p-3 hover:bg-white/10 transition"
+      className="flex items-center gap-3 rounded-xl bg-zinc-900/60 border border-zinc-800 p-3 hover:bg-zinc-800/60 transition"
     >
       {c.avatar_url ? (
         <Image
@@ -83,7 +83,7 @@ function CommunityCard({ community: c, isMember }: { community: Community; isMem
         </div>
       )}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-white truncate">{c.name}</p>
+        <p className="text-sm font-semibold text-zinc-100 truncate">{c.name}</p>
         {c.description && (
           <p className="text-xs text-zinc-500 truncate">{c.description}</p>
         )}

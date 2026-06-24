@@ -118,7 +118,7 @@ export default async function AlbumResultsPage({ params }: Props) {
           <div className="w-[88px] h-[88px] rounded-xl bg-[#7F77DD]/30 flex items-center justify-center text-4xl shrink-0">🎵</div>
         )}
         <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-bold text-white leading-tight">{first.album_name}</h1>
+          <h1 className="text-lg font-bold text-zinc-100 leading-tight">{first.album_name}</h1>
           <p className="text-sm text-zinc-400">{first.artist_name}</p>
           <p className="text-xs text-zinc-600 mt-1">{rows.length} avaliação{rows.length !== 1 ? 'ões' : ''}</p>
         </div>
@@ -170,7 +170,7 @@ export default async function AlbumResultsPage({ params }: Props) {
           <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Escolhas da comunidade</h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {markerTallies.map(m => (
-              <div key={m.field} className="rounded-xl bg-white/5 p-3">
+              <div key={m.field} className="rounded-xl bg-zinc-900/60 border border-zinc-800 p-3">
                 <p className="text-xs text-zinc-500 mb-2">{m.emoji} {m.label}</p>
                 {m.entries.length === 0 ? (
                   <p className="text-xs text-zinc-700">Nenhum voto</p>
@@ -207,11 +207,11 @@ export default async function AlbumResultsPage({ params }: Props) {
             const p = (Array.isArray(profileData) ? profileData[0] : profileData) as { username: string; display_name: string | null; avatar_url: string | null } | null
             const name = p?.display_name ?? p?.username ?? 'Incelica'
             return (
-              <div key={row.id} className="flex items-center gap-3 rounded-xl bg-white/5 p-3">
+              <div key={row.id} className="flex items-center gap-3 rounded-xl bg-zinc-900/60 border border-zinc-800 p-3">
                 <Link href={`/profile/${p?.username}`}>
                   {p?.avatar_url ? (
                     <Image src={p.avatar_url} alt={name} width={32} height={32}
-                      className="rounded-full object-cover shrink-0"
+                      className="w-8 h-8 rounded-full object-cover shrink-0"
                     />
                   ) : (
                     <div className="w-8 h-8 rounded-full bg-[#7F77DD]/40 flex items-center justify-center text-sm shrink-0">
@@ -220,7 +220,7 @@ export default async function AlbumResultsPage({ params }: Props) {
                   )}
                 </Link>
                 <div className="min-w-0 flex-1">
-                  <Link href={`/profile/${p?.username}`} className="text-sm font-semibold text-white hover:underline">
+                  <Link href={`/profile/${p?.username}`} className="text-sm font-semibold text-zinc-100 hover:underline">
                     {name}
                   </Link>
                   <p className="text-xs text-zinc-600">

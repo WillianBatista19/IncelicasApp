@@ -328,8 +328,8 @@ function AdvanceModal({
   useModalLock(true)
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-      <div className="w-full max-w-sm rounded-xl bg-zinc-900 border border-white/10 p-5 space-y-4">
-        <h2 className="font-bold text-white text-center">{title}</h2>
+      <div className="w-full max-w-sm rounded-xl bg-zinc-900 border border-zinc-700 p-5 space-y-4">
+        <h2 className="font-bold text-zinc-100 text-center">{title}</h2>
         <p className="text-sm text-zinc-400 text-center whitespace-pre-line">{body}</p>
         <div className="flex gap-2">
           <button onClick={onCancel} className="flex-1 rounded-xl bg-white/10 py-2 text-sm text-zinc-300 hover:text-white">
@@ -365,7 +365,7 @@ function FinishedResults({ event, tracks }: { event: SurvivorEvent; tracks: Surv
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4 rounded-xl bg-white/5 p-4">
+      <div className="flex items-center gap-4 rounded-xl bg-zinc-900/60 border border-zinc-800 p-4">
         {event.cover_url && (
           <Image src={event.cover_url} alt={event.album_name} width={72} height={72}
             className="rounded-xl object-cover shrink-0"
@@ -373,7 +373,7 @@ function FinishedResults({ event, tracks }: { event: SurvivorEvent; tracks: Surv
         )}
         <div className="min-w-0">
           <p className="text-xs text-[#D4537E] font-semibold uppercase tracking-wider">Resultado Final</p>
-          <p className="font-bold text-white text-lg truncate">{event.album_name}</p>
+          <p className="font-bold text-zinc-100 text-lg truncate">{event.album_name}</p>
           <p className="text-sm text-zinc-400 truncate">{event.artist_name}</p>
         </div>
       </div>
@@ -383,7 +383,7 @@ function FinishedResults({ event, tracks }: { event: SurvivorEvent; tracks: Surv
           <p className="text-center text-2xl">🏆🏆</p>
           <p className="text-xs text-yellow-400 font-semibold uppercase tracking-wider text-center">Empate na Final! Duas Campeãs</p>
           {winners.map(w => (
-            <p key={w.id} className="font-bold text-white text-center truncate">{w.track_name}</p>
+            <p key={w.id} className="font-bold text-zinc-100 text-center truncate">{w.track_name}</p>
           ))}
           <button
             onClick={shareWinner}
@@ -397,7 +397,7 @@ function FinishedResults({ event, tracks }: { event: SurvivorEvent; tracks: Surv
           <span className="text-3xl">🏆</span>
           <div className="min-w-0">
             <p className="text-xs text-yellow-400 font-semibold uppercase tracking-wider">Campeã</p>
-            <p className="font-bold text-white text-lg truncate">{winners[0].track_name}</p>
+            <p className="font-bold text-zinc-100 text-lg truncate">{winners[0].track_name}</p>
           </div>
           <button
             onClick={shareWinner}
@@ -413,12 +413,12 @@ function FinishedResults({ event, tracks }: { event: SurvivorEvent; tracks: Surv
         {ordered.map(t => (
           <div
             key={t.id}
-            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${t.final_position === 1 ? 'bg-yellow-500/10' : 'bg-white/5'}`}
+            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 border ${t.final_position === 1 ? 'bg-yellow-500/10 border-yellow-500/20' : 'bg-zinc-900/60 border-zinc-800'}`}
           >
             <span className={`w-6 text-center text-sm font-bold shrink-0 ${t.final_position === 1 ? 'text-yellow-400' : 'text-zinc-500'}`}>
               {t.final_position === 1 ? '🏆' : `#${t.final_position}`}
             </span>
-            <span className={`flex-1 text-sm truncate ${t.final_position === 1 ? 'text-white font-semibold' : 'text-zinc-300'}`}>
+            <span className={`flex-1 text-sm truncate ${t.final_position === 1 ? 'text-zinc-100 font-semibold' : 'text-zinc-300'}`}>
               {t.track_name}
             </span>
             {t.eliminated_at_round && (
@@ -468,14 +468,14 @@ function TrackCard({
   return (
     <div className={`rounded-xl border p-3 space-y-2 transition-all ${
       isDimmed
-        ? 'opacity-35 bg-white/5 border-white/5 pointer-events-none'
+        ? 'opacity-35 bg-zinc-900/60 border-zinc-800 pointer-events-none'
         : isUserVote
           ? 'bg-[#D4537E]/10 border-[#D4537E]/40'
-          : 'bg-white/5 border-white/5'
+          : 'bg-zinc-900/60 border-zinc-800'
     }`}>
       <div className="flex items-center gap-2">
         <span className="text-xs text-zinc-500 w-5 text-right shrink-0">{track.track_number}</span>
-        <span className="flex-1 text-sm text-white font-medium truncate">{track.track_name}</span>
+        <span className="flex-1 text-sm text-zinc-100 font-medium truncate">{track.track_name}</span>
 
         {track.preview_url && !isDimmed && (
           <button
@@ -550,13 +550,13 @@ function EventHistory({ pastEvents }: { pastEvents: PastEventSummary[] }) {
       <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Histórico de Survivors</p>
       <div className="space-y-2">
         {pastEvents.map(e => (
-          <div key={e.id} className="flex items-center gap-3 rounded-xl bg-white/5 p-3">
+          <div key={e.id} className="flex items-center gap-3 rounded-xl bg-zinc-900/60 border border-zinc-800 p-3">
             {e.cover_url
               ? <Image src={e.cover_url} alt={e.album_name} width={44} height={44} className="rounded-lg object-cover shrink-0" />
               : <div className="w-11 h-11 rounded-lg bg-zinc-800 shrink-0" />
             }
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-white truncate">{e.album_name}</p>
+              <p className="text-sm font-semibold text-zinc-100 truncate">{e.album_name}</p>
               <p className="text-xs text-zinc-400 truncate">{e.artist_name}</p>
               {e.winner_track && (
                 <p className="text-xs text-yellow-400 mt-0.5 truncate">🏆 {e.winner_track}</p>
@@ -675,14 +675,11 @@ export default function SurvivorClient({
   const totalVotes       = currentVotes.length
   const totalTbVotes     = tiebreakVotes.length
 
-  // Most-voted for AdvanceModal body text
-  let mostVotedTrackId = survivingTracks[0]?.id ?? ''
-  let maxVotes = regularTally.get(mostVotedTrackId) ?? 0
-  for (const t of survivingTracks) {
-    const c = regularTally.get(t.id) ?? 0
-    if (c > maxVotes) { maxVotes = c; mostVotedTrackId = t.id }
-  }
-  const mostVotedTrackName = survivingTracks.find(t => t.id === mostVotedTrackId)?.track_name ?? ''
+  // Compute tracks that would be eliminated when advancing (for AdvanceModal body text)
+  const maxVotesAmt = Math.max(0, ...survivingTracks.map(t => regularTally.get(t.id) ?? 0))
+  const topTracksForAdvance = maxVotesAmt === 0
+    ? survivingTracks.slice(-1)
+    : survivingTracks.filter(t => (regularTally.get(t.id) ?? 0) === maxVotesAmt)
 
   const phaseLabel = isFinal
     ? '🏆 Grande Final'
@@ -713,7 +710,11 @@ export default function SurvivorClient({
     ? 'O resultado da Grande Final será revelado com base nos votos.'
     : isSemifinalTb
     ? 'O voto de desempate da semifinal será processado.'
-    : `"${mostVotedTrackName || 'sem votos ainda'}" será eliminada e a próxima rodada começa.`
+    : isSemifinal && topTracksForAdvance.length > 1
+    ? `Empate entre ${topTracksForAdvance.length} faixas: ${topTracksForAdvance.map(t => `"${t.track_name}"`).join(' e ')}. Um desempate será ativado.`
+    : topTracksForAdvance.length > 1
+    ? `Empate! As seguintes faixas serão eliminadas: ${topTracksForAdvance.map(t => `"${t.track_name}"`).join(', ')}.`
+    : `"${topTracksForAdvance[0]?.track_name || 'sem votos ainda'}" será eliminada e a próxima rodada começa.`
 
   const advanceConfirmLabel = isFinal
     ? 'Revelar Campeão →'
@@ -724,21 +725,21 @@ export default function SurvivorClient({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-white">🎵 Survivor Musical</h1>
+        <h1 className="text-xl font-bold text-zinc-100">🎵 Survivor Musical</h1>
         <p className="text-sm text-zinc-500 mt-0.5">Vote para eliminar a pior faixa de cada rodada</p>
       </div>
 
       {activeEvent ? (
         <div className="space-y-4">
           {/* Album header */}
-          <div className="flex items-center gap-4 rounded-xl bg-white/5 p-4">
+          <div className="flex items-center gap-4 rounded-xl bg-zinc-900/60 border border-zinc-800 p-4">
             {activeEvent.cover_url && (
               <Image src={activeEvent.cover_url} alt={activeEvent.album_name} width={80} height={80}
                 className="rounded-xl object-cover shrink-0"
               />
             )}
             <div className="min-w-0 flex-1">
-              <p className="font-bold text-white text-lg truncate">{activeEvent.album_name}</p>
+              <p className="font-bold text-zinc-100 text-lg truncate">{activeEvent.album_name}</p>
               <p className="text-sm text-zinc-400 truncate">{activeEvent.artist_name}</p>
               <div className="flex items-center gap-2 mt-2 flex-wrap">
                 <span className={`text-xs rounded-full px-2.5 py-0.5 font-semibold ${
@@ -837,7 +838,7 @@ export default function SurvivorClient({
               </summary>
               <div className="mt-2 space-y-1">
                 {eliminatedTracks.map(t => (
-                  <div key={t.id} className="flex items-center gap-2 rounded-xl bg-white/5 px-3 py-2 opacity-50">
+                  <div key={t.id} className="flex items-center gap-2 rounded-xl bg-zinc-900/60 border border-zinc-800 px-3 py-2 opacity-50">
                     <span className="text-xs text-zinc-600 w-5 text-right shrink-0">{t.track_number}</span>
                     <span className="flex-1 text-sm text-zinc-400 line-through truncate">{t.track_name}</span>
                     <span className="text-xs text-zinc-600 shrink-0">elim. R{t.eliminated_at_round}</span>
@@ -873,7 +874,7 @@ export default function SurvivorClient({
       ) : finishedEvent ? (
         <FinishedResults event={finishedEvent} tracks={finishedTracks} />
       ) : (
-        <div className="rounded-xl bg-white/5 p-8 text-center space-y-3">
+        <div className="rounded-xl bg-zinc-900/60 border border-zinc-800 p-8 text-center space-y-3">
           <p className="text-2xl">🎵</p>
           <p className="text-zinc-400">Nenhum Survivor ativo no momento</p>
           {isOwner && (
