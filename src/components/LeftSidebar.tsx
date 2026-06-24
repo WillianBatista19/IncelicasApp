@@ -7,9 +7,10 @@ import { useUser } from '@/context/UserContext'
 import { createClient } from '@/lib/supabase/client'
 import { useUnreadCount } from '@/hooks/useUnreadCount'
 import { useUnreadMessages } from '@/hooks/useUnreadMessages'
+import type { Shortcut } from '@/types'
 
 export default function LeftSidebar() {
-  const { user, signOut } = useUser()
+  const { user, signOut, shortcuts, shortcutsLoading, removeShortcut, reorderShortcuts } = useUser()
   const pathname  = usePathname()
   const router    = useRouter()
   const supabase  = useMemo(() => createClient(), [])
@@ -17,6 +18,8 @@ export default function LeftSidebar() {
   const unreadMsg = useUnreadMessages(user?.id ?? null)
 
   const [username, setUsername] = useState<string | null>(null)
+  const [dragId,     setDragId]     = useState<string | null>(null)
+  const [dragOverId, setDragOverId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user) { setUsername(null); return }
@@ -43,14 +46,45 @@ export default function LeftSidebar() {
   }
 
   const items = [
-    { href: '/feed',          label: 'Feed',          icon: HomeIcon,    badge: 0 },
-    { href: '/explore',       label: 'Explorar',      icon: CompassIcon, badge: 0 },
-    { href: '/notifications', label: 'Notificações',  icon: BellIcon,    badge: unread },
-    { href: '/messages',      label: 'Mensagens',     icon: MessageIcon, badge: unreadMsg },
-    { href: '/jogar',         label: 'Jogar',         icon: GameIcon,       badge: 0 },
+    { href: '/feed',          label: 'Feed',          icon: HomeIcon,        badge: 0 },
+    { href: '/explore',       label: 'Explorar',      icon: CompassIcon,     badge: 0 },
+    { href: '/notifications', label: 'Notificações',  icon: BellIcon,        badge: unread },
+    { href: '/messages',      label: 'Mensagens',     icon: MessageIcon,     badge: unreadMsg },
+    { href: '/jogar',         label: 'Jogar',         icon: GameIcon,        badge: 0 },
     { href: '/communities',   label: 'Comunidades',   icon: CommunitiesIcon, badge: 0 },
-    { href: profileHref,      label: 'Perfil',        icon: UserIcon,    badge: 0 },
+    { href: profileHref,      label: 'Perfil',        icon: UserIcon,        badge: 0 },
   ]
+
+  // Visual order during drag (computed, not state)
+  const displayShortcuts: Shortcut[] = useMemo(() => {
+    if (!dragId || !dragOverId || dragId === dragOverId) return shortcuts
+    const from = shortcuts.findIndex(s => s.id === dragId)
+    const to   = shortcuts.findIndex(s => s.id === dragOverId)
+    if (from === -1 || to === -1) return shortcuts
+    const arr = [...shortcuts]
+    const [moved] = arr.splice(from, 1)
+    arr.splice(to, 0, moved)
+    return arr
+  }, [shortcuts, dragId, dragOverId])
+
+  function handleDragStart(id: string) { setDragId(id) }
+  function handleDragOver(e: React.DragEvent, id: string) { e.preventDefault(); setDragOverId(id) }
+  function handleDragEnd() { setDragId(null); setDragOverId(null) }
+
+  function handleDrop(targetId: string) {
+    if (dragId && dragId !== targetId) {
+      const from = shortcuts.findIndex(s => s.id === dragId)
+      const to   = shortcuts.findIndex(s => s.id === targetId)
+      if (from !== -1 && to !== -1) {
+        const arr = [...shortcuts]
+        const [moved] = arr.splice(from, 1)
+        arr.splice(to, 0, moved)
+        reorderShortcuts(arr.map(s => s.id))
+      }
+    }
+    setDragId(null)
+    setDragOverId(null)
+  }
 
   return (
     <aside className="hidden xl:flex xl:w-52 xl:shrink-0 xl:flex-col sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto">
@@ -82,6 +116,57 @@ export default function LeftSidebar() {
         })}
       </nav>
 
+      {/* Shortcuts section */}
+      {user && (
+        <div className="mt-4 border-t border-zinc-800 pt-3">
+          <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
+            Atalhos
+          </p>
+
+          {shortcutsLoading ? null : shortcuts.length === 0 ? (
+            <p className="px-3 text-xs text-zinc-600 leading-relaxed">
+              📌 Fixe comunidades e jogos favoritos
+            </p>
+          ) : (
+            <div className="space-y-0.5">
+              {displayShortcuts.map(shortcut => {
+                const isDragging = shortcut.id === dragId
+                const isDragOver = shortcut.id === dragOverId && dragId !== dragOverId
+
+                return (
+                  <div
+                    key={shortcut.id}
+                    draggable
+                    onDragStart={() => handleDragStart(shortcut.id)}
+                    onDragOver={e => handleDragOver(e, shortcut.id)}
+                    onDrop={() => handleDrop(shortcut.id)}
+                    onDragEnd={handleDragEnd}
+                    className={`group relative flex items-center rounded-xl transition-all cursor-grab active:cursor-grabbing ${
+                      isDragging ? 'opacity-40' : ''
+                    } ${isDragOver ? 'ring-1 ring-[#D4537E]/50 bg-[#D4537E]/5' : ''}`}
+                  >
+                    <Link
+                      href={shortcut.url}
+                      className="flex flex-1 items-center gap-2 px-3 py-1.5 min-w-0 text-sm text-zinc-400 hover:text-zinc-100 transition-colors"
+                    >
+                      <ShortcutIcon icon={shortcut.icon} name={shortcut.name} />
+                      <span className="truncate">{shortcut.name}</span>
+                    </Link>
+                    <button
+                      onClick={e => { e.preventDefault(); removeShortcut(shortcut.url) }}
+                      title="Remover atalho"
+                      className="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-zinc-600 hover:text-[#D4537E]"
+                    >
+                      <PinSolidIcon className="h-3 w-3" />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="mt-6 border-t border-zinc-800 pt-4">
         <button
           type="button"
@@ -110,6 +195,31 @@ export default function LeftSidebar() {
         </Link>
       </div>
     </aside>
+  )
+}
+
+// ─── ShortcutIcon ─────────────────────────────────────────────────────────────
+
+function ShortcutIcon({ icon, name }: { icon: string | null; name: string }) {
+  const isUrl = !!icon && (icon.startsWith('http') || icon.startsWith('/'))
+  if (isUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={icon!} alt={name} className="w-4 h-4 rounded object-cover shrink-0" />
+    )
+  }
+  return (
+    <span className="text-sm shrink-0 leading-none">{icon ?? '📌'}</span>
+  )
+}
+
+// ─── Icons ───────────────────────────────────────────────────────────────────
+
+function PinSolidIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M16 3a1 1 0 0 0-1 1v1H9V4a1 1 0 1 0-2 0v8.172l-2.536 2.536A1 1 0 0 0 5 16h6v4a1 1 0 1 0 2 0v-4h6a1 1 0 0 0 .707-1.707L17 12.172V4a1 1 0 0 0-1-1z"/>
+    </svg>
   )
 }
 

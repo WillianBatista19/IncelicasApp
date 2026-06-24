@@ -230,6 +230,18 @@ export interface SurvivorTrack {
   created_at:          string
 }
 
+export interface Shortcut {
+  id:            string
+  user_id:       string
+  type:          'community' | 'game'
+  slug:          string
+  name:          string
+  icon:          string | null
+  url:           string
+  display_order: number
+  created_at:    string
+}
+
 export interface GrammyEdition {
   id:             string
   year:           number

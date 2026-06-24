@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { Community, CommunityMemberRow, CommunityPost, CommunityRole } from '@/types'
+import { useUser } from '@/context/UserContext'
 import CommunityPostCard from './CommunityPostCard'
 import CommunityPostComposer from './CommunityPostComposer'
 import MembersTab from './MembersTab'
@@ -12,6 +13,33 @@ import CommunityAvatarModal from './CommunityAvatarModal'
 import { toggleNotificationsMuted } from '@/app/(app)/communities/actions'
 
 type Tab = 'posts' | 'members' | 'jogos'
+
+const GAMES = [
+  {
+    href:        '/communities/musica/avaliar',
+    slug:        'avaliar-album',
+    name:        'Avaliar Álbum',
+    icon:        '🎵',
+    description: 'Dê nota para cada faixa, escolha seus favoritos e veja o ranking da comunidade',
+    bg:          'bg-[#D4537E]/20',
+  },
+  {
+    href:        '/communities/musica/survivor',
+    slug:        'survivor',
+    name:        'Survivor Musical',
+    icon:        '🏆',
+    description: null, // dynamic — uses activeSurvivorEvent
+    bg:          'bg-[#7F77DD]/20',
+  },
+  {
+    href:        '/communities/musica/grammy',
+    slug:        'grammy',
+    name:        'Grammy Predictions',
+    icon:        '🎙️',
+    description: 'Faça suas previsões e veja quem acertou mais',
+    bg:          'bg-yellow-500/10',
+  },
+]
 
 interface Props {
   community:          Community
@@ -29,38 +57,70 @@ export default function CommunityPageClient({
   activeSurvivorEvent,
 }: Props) {
   const router = useRouter()
-  const [tab, setTab]                 = useState<Tab>('posts')
+  const { isShortcutted, addShortcut, removeShortcut, shortcuts } = useUser()
+
+  const [tab,            setTab]            = useState<Tab>('posts')
   const [showAvatarModal, setShowAvatarModal] = useState(false)
-  const [muted, setMuted]             = useState(notificationsMuted)
-  const [muteLoading, setMuteLoading] = useState(false)
-  const [toast, setToast]             = useState<string | null>(null)
+  const [muted,          setMuted]          = useState(notificationsMuted)
+  const [muteLoading,    setMuteLoading]    = useState(false)
+  const [toast,          setToast]          = useState<string | null>(null)
 
   const isMember = !!viewerRole
   const isOwner  = viewerRole === 'owner'
 
-  // Auto-dismiss toast after 2.5 s
+  const communityUrl = `/communities/${community.slug}`
+  const commPinned   = isShortcutted(communityUrl)
+
   useEffect(() => {
     if (!toast) return
     const t = setTimeout(() => setToast(null), 2500)
     return () => clearTimeout(t)
   }, [toast])
 
-  function handleNewPost() {
-    router.refresh()
-  }
+  function handleNewPost() { router.refresh() }
 
   async function handleMuteToggle() {
     if (muteLoading) return
     const next = !muted
-    setMuted(next)           // optimistic
+    setMuted(next)
     setMuteLoading(true)
     try {
       await toggleNotificationsMuted(community.id, next)
       setToast(next ? 'Notificações silenciadas' : 'Notificações ativadas')
     } catch {
-      setMuted(!next)        // revert
+      setMuted(!next)
     } finally {
       setMuteLoading(false)
+    }
+  }
+
+  async function handleCommunityPin() {
+    if (commPinned) {
+      await removeShortcut(communityUrl)
+    } else {
+      const result = await addShortcut({
+        type: 'community',
+        slug: community.slug,
+        name: community.name,
+        icon: community.avatar_url ?? '🏘️',
+        url:  communityUrl,
+      })
+      if (result.error) setToast(result.error)
+    }
+  }
+
+  async function handleGamePin(game: { href: string; slug: string; name: string; icon: string }) {
+    if (isShortcutted(game.href)) {
+      await removeShortcut(game.href)
+    } else {
+      const result = await addShortcut({
+        type: 'game',
+        slug: game.slug,
+        name: game.name,
+        icon: game.icon,
+        url:  game.href,
+      })
+      if (result.error) setToast(result.error)
     }
   }
 
@@ -114,7 +174,6 @@ export default function CommunityPageClient({
 
           {currentUserId && (
             <div className="flex items-center gap-2 shrink-0">
-              {/* Notification mute toggle — members only */}
               {isMember && (
                 <button
                   type="button"
@@ -127,6 +186,18 @@ export default function CommunityPageClient({
                   {muted ? <BellMutedIcon className="h-4 w-4" /> : <BellIcon className="h-4 w-4" />}
                 </button>
               )}
+
+              {/* Pin button */}
+              <button
+                type="button"
+                onClick={handleCommunityPin}
+                title={commPinned ? 'Remover atalho' : 'Fixar no menu'}
+                className={`rounded-xl bg-white/10 p-2 transition-colors ${
+                  commPinned ? 'text-[#D4537E]' : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                <PinIcon className="h-4 w-4" filled={commPinned} />
+              </button>
 
               {isOwner && (
                 <a
@@ -181,62 +252,53 @@ export default function CommunityPageClient({
 
       {tab === 'jogos' && (
         <div className="space-y-4">
-          <Link
-            href="/communities/musica/avaliar"
-            className="flex items-center gap-4 rounded-xl bg-zinc-900/60 border border-zinc-800 p-4 hover:bg-zinc-800/60 transition-colors"
-          >
-            <div className="w-14 h-14 rounded-xl bg-[#D4537E]/20 flex items-center justify-center text-3xl shrink-0">
-              🎵
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-zinc-100">Avaliar Álbum</p>
-              <p className="text-sm text-zinc-400 mt-0.5">
-                Dê nota para cada faixa, escolha seus favoritos e veja o ranking da comunidade
-              </p>
-            </div>
-            <span className="text-zinc-600 shrink-0">→</span>
-          </Link>
+          {GAMES.map(game => {
+            const pinned = isShortcutted(game.href)
+            return (
+              <div
+                key={game.href}
+                className="group relative rounded-xl bg-zinc-900/60 border border-zinc-800 hover:bg-zinc-800/60 transition-colors"
+              >
+                <Link href={game.href} className="flex items-center gap-4 p-4">
+                  <div className={`w-14 h-14 rounded-xl ${game.bg} flex items-center justify-center text-3xl shrink-0`}>
+                    {game.icon}
+                  </div>
+                  <div className="flex-1 min-w-0 pr-6">
+                    <p className="font-semibold text-zinc-100">{game.name}</p>
+                    {game.href === '/communities/musica/survivor' ? (
+                      activeSurvivorEvent ? (
+                        <p className="text-sm text-[#7F77DD] mt-0.5 truncate">
+                          {activeSurvivorEvent.album_name} · Rodada {activeSurvivorEvent.current_round}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-zinc-400 mt-0.5">Nenhum evento ativo</p>
+                      )
+                    ) : null}
+                    {game.description && (
+                      <p className="text-sm text-zinc-400 mt-0.5">{game.description}</p>
+                    )}
+                    {game.href === '/communities/musica/survivor' && (
+                      <p className="text-xs text-zinc-500 mt-0.5">Vote para eliminar a pior faixa de cada rodada</p>
+                    )}
+                  </div>
+                </Link>
 
-          <Link
-            href="/communities/musica/survivor"
-            className="flex items-center gap-4 rounded-xl bg-zinc-900/60 border border-zinc-800 p-4 hover:bg-zinc-800/60 transition-colors"
-          >
-            <div className="w-14 h-14 rounded-xl bg-[#7F77DD]/20 flex items-center justify-center text-3xl shrink-0">
-              🏆
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-zinc-100">Survivor Musical</p>
-              {activeSurvivorEvent ? (
-                <p className="text-sm text-[#7F77DD] mt-0.5 truncate">
-                  {activeSurvivorEvent.album_name} · Rodada {activeSurvivorEvent.current_round}
-                </p>
-              ) : (
-                <p className="text-sm text-zinc-400 mt-0.5">
-                  Nenhum evento ativo
-                </p>
-              )}
-              <p className="text-xs text-zinc-500 mt-0.5">
-                Vote para eliminar a pior faixa de cada rodada
-              </p>
-            </div>
-            <span className="text-zinc-600 shrink-0">→</span>
-          </Link>
-
-          <Link
-            href="/communities/musica/grammy"
-            className="flex items-center gap-4 rounded-xl bg-zinc-900/60 border border-zinc-800 p-4 hover:bg-zinc-800/60 transition-colors"
-          >
-            <div className="w-14 h-14 rounded-xl bg-yellow-500/10 flex items-center justify-center text-3xl shrink-0">
-              🎙️
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-zinc-100">Grammy Predictions</p>
-              <p className="text-sm text-zinc-400 mt-0.5">
-                Faça suas previsões e veja quem acertou mais
-              </p>
-            </div>
-            <span className="text-zinc-600 shrink-0">→</span>
-          </Link>
+                {currentUserId && (
+                  <button
+                    onClick={() => handleGamePin(game)}
+                    title={pinned ? 'Remover atalho' : 'Fixar no menu'}
+                    className={`absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-all ${
+                      pinned
+                        ? 'text-[#D4537E]'
+                        : 'text-zinc-600 opacity-0 group-hover:opacity-100 hover:text-zinc-300'
+                    }`}
+                  >
+                    <PinIcon className="h-4 w-4" filled={pinned} />
+                  </button>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
 
@@ -258,13 +320,27 @@ export default function CommunityPageClient({
         />
       )}
 
-      {/* Toast */}
       {toast && (
         <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 whitespace-nowrap rounded-xl bg-zinc-800 px-4 py-2 text-sm text-white shadow-xl">
           {toast}
         </div>
       )}
     </div>
+  )
+}
+
+// ─── Icons ────────────────────────────────────────────────────────────────────
+
+function PinIcon({ className, filled }: { className?: string; filled: boolean }) {
+  return filled ? (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M16 3a1 1 0 0 0-1 1v1H9V4a1 1 0 1 0-2 0v8.172l-2.536 2.536A1 1 0 0 0 5 16h6v4a1 1 0 1 0 2 0v-4h6a1 1 0 0 0 .707-1.707L17 12.172V4a1 1 0 0 0-1-1z" />
+    </svg>
+  ) : (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <line x1="12" y1="17" x2="12" y2="22" />
+      <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
+    </svg>
   )
 }
 
