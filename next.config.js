@@ -3,10 +3,7 @@ const nextConfig = {
   serverExternalPackages: ['@xenova/transformers', 'onnxruntime-node'],
   webpack: (config, { isServer }) => {
     if (isServer) {
-      config.externals.push({
-        'onnxruntime-node': 'commonjs onnxruntime-node',
-        '@xenova/transformers': 'commonjs @xenova/transformers',
-      })
+      config.externals.push('@xenova/transformers', 'onnxruntime-node')
     }
     return config
   },
