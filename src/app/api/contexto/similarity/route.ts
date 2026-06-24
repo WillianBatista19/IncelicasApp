@@ -5,7 +5,32 @@ export const runtime     = 'nodejs'
 export const dynamic     = 'force-dynamic'
 export const maxDuration = 30
 
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GOOGLE_GEMINI_API_KEY}`
+const GEMINI_EMBED_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${process.env.GOOGLE_GEMINI_API_KEY}`
+
+async function getEmbedding(text: string): Promise<number[]> {
+  const response = await fetch(GEMINI_EMBED_URL, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model:   'models/gemini-embedding-001',
+      content: { parts: [{ text }] },
+    }),
+  })
+  const data = await response.json() as Record<string, unknown>
+  console.log('[Gemini Embed] status:', response.status, 'error:', (data as { error?: unknown }).error ?? 'none')
+  if (!response.ok) throw new Error(`Gemini embed error ${response.status}: ${JSON.stringify(data)}`)
+  return (data.embedding as { values: number[] }).values
+}
+
+function cosineSimilarity(a: number[], b: number[]): number {
+  let dot = 0, magA = 0, magB = 0
+  for (let i = 0; i < a.length; i++) {
+    dot  += a[i] * b[i]
+    magA += a[i] * a[i]
+    magB += b[i] * b[i]
+  }
+  return dot / (Math.sqrt(magA) * Math.sqrt(magB))
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -47,42 +72,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ similarity: 100, isCorrect: true })
     }
 
-    const response = await fetch(GEMINI_URL, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: `Rate the semantic similarity between these two Portuguese words on a scale from 0 to 100. Consider meaning, context, and associations. Return ONLY a single integer number, nothing else.\nWord 1: "${secretWord}"\nWord 2: "${guess}"\nSimilarity score (0-100):`,
-          }],
-        }],
-        generationConfig: { maxOutputTokens: 10, temperature: 0 },
-      }),
-    })
+    const [secretEmbed, guessEmbed] = await Promise.all([
+      getEmbedding(secretWord),
+      getEmbedding(guess),
+    ])
 
-    const data = await response.json() as Record<string, unknown>
-    console.log('[Gemini] status:', response.status, 'response:', JSON.stringify(data))
+    const raw        = cosineSimilarity(secretEmbed, guessEmbed)
+    const similarity = Math.min(99, Math.max(0, Math.round(raw * 100)))
 
-    if (!response.ok) {
-      console.error('[similarity] Gemini error:', response.status, JSON.stringify(data))
-      return NextResponse.json({ error: `Gemini API error: ${response.status}` }, { status: 502 })
-    }
-
-    const text = (
-      (data?.candidates as { content?: { parts?: { text?: string }[] } }[])?.[0]
-        ?.content?.parts?.[0]?.text ?? ''
-    ).trim()
-
-    // Extract first integer found — handles "85", "85.", "Score: 85", etc.
-    const match = text.match(/\d+/)
-    const similarity = Math.min(99, Math.max(0, match ? parseInt(match[0]) : 0))
-
-    console.log(`[similarity] "${guess}" vs "${secretWord}" → raw: "${text}", score: ${similarity}`)
+    console.log(`[similarity] "${guess}" vs "${secretWord}" → cosine: ${raw.toFixed(4)}, score: ${similarity}`)
     return NextResponse.json({ similarity, isCorrect: false })
 
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    console.error('[similarity] UNCAUGHT ERROR:', message)
+    console.error('[similarity] error:', message)
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
