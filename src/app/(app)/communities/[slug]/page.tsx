@@ -25,7 +25,7 @@ export default async function CommunityPage({ params }: Props) {
 
   const c = community as Community
 
-  const [postsRes, membersRes, viewerMemberRes, survivorRes, memberAlbumsRes] = await Promise.all([
+  const [postsRes, membersRes, viewerMemberRes, survivorRes, batalhaRes, memberAlbumsRes] = await Promise.all([
     supabase
       .from('community_posts')
       .select(`
@@ -60,6 +60,14 @@ export default async function CommunityPage({ params }: Props) {
       : Promise.resolve({ data: null }),
     slug === 'musica'
       ? supabase
+          .from('batalha_events')
+          .select('artist_name, ends_at')
+          .eq('community_id', c.id)
+          .eq('status', 'voting')
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    slug === 'musica'
+      ? supabase
           .from('community_members')
           .select(`
             profiles!community_members_user_id_fkey(
@@ -86,6 +94,10 @@ export default async function CommunityPage({ params }: Props) {
 
   const activeSurvivorEvent = (survivorRes as {
     data: { album_name: string; artist_name: string; current_round: number } | null
+  }).data
+
+  const activeBatalhaEvent = (batalhaRes as {
+    data: { artist_name: string; ends_at: string } | null
   }).data
   const viewerRole         = viewerMemberData?.role ?? null
   const canPost            = viewerMemberData?.can_post ?? false
@@ -156,6 +168,7 @@ export default async function CommunityPage({ params }: Props) {
         canPost={canPost}
         notificationsMuted={notificationsMuted}
         activeSurvivorEvent={activeSurvivorEvent}
+        activeBatalhaEvent={activeBatalhaEvent}
         awaitedAlbumGroups={awaitedAlbumGroups}
       />
     </main>

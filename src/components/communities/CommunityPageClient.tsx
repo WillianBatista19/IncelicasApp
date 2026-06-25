@@ -42,6 +42,14 @@ const GAMES = [
     description: 'Faça suas previsões e veja quem acertou mais',
     bg:          'bg-yellow-500/10',
   },
+  {
+    href:        '/communities/musica/batalha',
+    slug:        'batalha',
+    name:        'Batalha de Álbuns',
+    icon:        '⚔️',
+    description: 'Compare álbuns do mesmo artista faixa a faixa e vote nas categorias',
+    bg:          'bg-[#1D9E75]/15',
+  },
 ]
 
 interface Props {
@@ -53,12 +61,13 @@ interface Props {
   canPost:            boolean
   notificationsMuted: boolean
   activeSurvivorEvent?:  { album_name: string; artist_name: string; current_round: number } | null
+  activeBatalhaEvent?:   { artist_name: string; ends_at: string } | null
   awaitedAlbumGroups?:  AwaitedAlbumGroup[]
 }
 
 export default function CommunityPageClient({
   community, posts, members, currentUserId, viewerRole, canPost, notificationsMuted,
-  activeSurvivorEvent, awaitedAlbumGroups = [],
+  activeSurvivorEvent, activeBatalhaEvent, awaitedAlbumGroups = [],
 }: Props) {
   const router = useRouter()
   const { isShortcutted, addShortcut, removeShortcut, shortcuts } = useUser()
@@ -299,8 +308,16 @@ export default function CommunityPageClient({
                       ) : (
                         <p className="text-sm text-zinc-400 mt-0.5">Nenhum evento ativo</p>
                       )
+                    ) : game.href === '/communities/musica/batalha' ? (
+                      activeBatalhaEvent ? (
+                        <p className="text-sm text-[#1D9E75] mt-0.5 truncate">
+                          ⚔️ {activeBatalhaEvent.artist_name} — votação aberta!
+                        </p>
+                      ) : (
+                        <p className="text-sm text-zinc-400 mt-0.5">{game.description}</p>
+                      )
                     ) : null}
-                    {game.description && (
+                    {game.description && game.href !== '/communities/musica/survivor' && game.href !== '/communities/musica/batalha' && (
                       <p className="text-sm text-zinc-400 mt-0.5">{game.description}</p>
                     )}
                     {game.href === '/communities/musica/survivor' && (

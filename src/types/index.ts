@@ -124,6 +124,52 @@ export interface StoryGroup {
   stories: Story[]
 }
 
+// ─── Batalha de Álbuns ──────────────────────────────────────────────────────
+export type BatalhaCategory = 'favorite' | 'best_cover' | 'best_composition' | 'best_production'
+
+export interface BatalhaEvent {
+  id:           string
+  community_id: string
+  created_by:   string
+  artist_name:  string
+  artist_id:    string
+  status:       'voting' | 'finished'
+  ends_at:      string
+  created_at:   string
+}
+
+export interface BatalhaAlbum {
+  id:           string
+  event_id:     string
+  album_id:     string
+  album_name:   string
+  cover_url:    string
+  release_year: string | null
+  total_tracks: number
+  total_score:  number
+  created_at:   string
+}
+
+export interface BatalhaTrackVote {
+  id:             string
+  event_id:       string
+  album_id:       string
+  track_position: number
+  track_name:     string
+  user_id:        string
+  rank:           number
+  created_at:     string
+}
+
+export interface BatalhaCategoryVote {
+  id:         string
+  event_id:   string
+  category:   BatalhaCategory
+  album_id:   string
+  user_id:    string
+  created_at: string
+}
+
 export interface ConversationMessage {
   id:              string
   conversation_id: string

@@ -1,9 +1,9 @@
 {
-  "/api/lastfm/route": "app/api/lastfm/route.js",
+  "/api/spotify/artist/route": "app/api/spotify/artist/route.js",
   "/icon.svg/route": "app/icon.svg/route.js",
-  "/(app)/feed/page": "app/(app)/feed/page.js",
+  "/(app)/communities/musica/batalha/page": "app/(app)/communities/musica/batalha/page.js",
+  "/(app)/communities/[slug]/page": "app/(app)/communities/[slug]/page.js",
   "/(app)/communities/musica/avaliar/page": "app/(app)/communities/musica/avaliar/page.js",
   "/(app)/notifications/page": "app/(app)/notifications/page.js",
-  "/(app)/post/[id]/page": "app/(app)/post/[id]/page.js",
-  "/(app)/profile/[username]/page": "app/(app)/profile/[username]/page.js"
+  "/(app)/feed/page": "app/(app)/feed/page.js"
 }
