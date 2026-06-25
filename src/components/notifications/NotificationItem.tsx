@@ -17,11 +17,12 @@ type Props = {
 }
 
 export default function NotificationItem({ notification, currentUsername, onRead }: Props) {
-  const { id, type, from_profile, post, comment, read, created_at, post_id, comment_id } = notification
+  const { id, type, from_profile, post, comment, read, created_at, post_id, comment_id, metadata } = notification
 
   const actorName = from_profile.display_name || from_profile.username
-  const text      = notificationText(type, actorName, comment?.content ?? null)
-  const emoji     = notificationEmoji(type)
+  const vibeType  = metadata?.vibe_type ?? null
+  const text      = notificationText(type, actorName, comment?.content ?? null, vibeType)
+  const emoji     = notificationEmoji(type, vibeType)
   const href      = notificationHref(type, from_profile.username, post_id, comment_id)
 
   const router   = useRouter()

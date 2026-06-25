@@ -85,6 +85,7 @@ export interface NotificationRow {
   comment_id:   string | null
   read:         boolean
   created_at:   string
+  metadata:     { vibe_type?: string } | null
   from_profile: Pick<Profile, 'display_name' | 'username' | 'avatar_url'>
   post:         Pick<Post, 'content'> | null
   comment:      Pick<Comment, 'content'> | null

@@ -1,35 +1,40 @@
 import type { NotificationType, VibeType } from '@/types'
 
-// Per-vibe notification copy. Used by triggers or future client-side notifications.
+function excerpt(text: string, max = 60) {
+  const trimmed = text.trim()
+  return trimmed.length <= max ? trimmed : trimmed.slice(0, max).trimEnd() + '…'
+}
+
+// Per-vibe copy — emoji embedded in text so it appears inline after the actor name.
+// The badge emoji is returned separately by notificationEmoji().
 export const VIBE_COPY: Record<VibeType, { text: (name: string) => string; emoji: string }> = {
-  serving:  { text: (n) => `${n} achou seu post uma brasa`,      emoji: '🔥'    },
-  morrei:   { text: (n) => `${n} morreu no seu post`,            emoji: '💀'    },
-  iconic:   { text: (n) => `${n} coroou seu post`,               emoji: '👑'    },
-  tomate:   { text: (n) => `${n} jogou um tomate no seu post`,   emoji: '🍅'    },
-  coco:     { text: (n) => `${n} deixou um cocô no seu post`,    emoji: '💩'    },
-  gag:      { text: (n) => `${n} ficou gag com seu post`,        emoji: '🤯'    },
-  old:      { text: (n) => `${n} achou seu post old`,            emoji: '🦕'    },
-  sixseven: { text: (n) => `${n} deu six seven no seu post`,     emoji: '6️⃣7️⃣' },
-  cha:      { text: (n) => `${n} derramou o chá no seu post`,    emoji: '☕'    },
-  hype:     { text: (n) => `${n} entrou na onda do seu post`,    emoji: '🌊'    },
+  serving:  { text: (n) => `${n} 🔥 deu Serving no seu post`,      emoji: '🔥'    },
+  morrei:   { text: (n) => `${n} 💀 morreu no seu post`,           emoji: '💀'    },
+  iconic:   { text: (n) => `${n} 👑 achou seu post Iconic`,        emoji: '👑'    },
+  tomate:   { text: (n) => `${n} 🍅 jogou um tomate no seu post`,  emoji: '🍅'    },
+  coco:     { text: (n) => `${n} 💩 deixou um cocô no seu post`,   emoji: '💩'    },
+  gag:      { text: (n) => `${n} 🤯 ficou Gag com seu post`,       emoji: '🤯'    },
+  old:      { text: (n) => `${n} 🦕 achou seu post Old`,           emoji: '🦕'    },
+  sixseven: { text: (n) => `${n} 6️⃣7️⃣ deu Six Seven no seu post`, emoji: '6️⃣7️⃣' },
+  cha:      { text: (n) => `${n} ☕ derramou o chá no seu post`,   emoji: '☕'    },
+  hype:     { text: (n) => `${n} 🌊 entrou na onda do seu post`,   emoji: '🌊'    },
 }
 
 export function vibeNotificationText(vibeType: VibeType, actorName: string): string {
   return VIBE_COPY[vibeType]?.text(actorName) ?? `${actorName} achou seu post uma vibe`
 }
 
-function excerpt(text: string, max = 60) {
-  const trimmed = text.trim()
-  return trimmed.length <= max ? trimmed : trimmed.slice(0, max).trimEnd() + '…'
-}
-
 export function notificationText(
   type:           NotificationType,
   actorName:      string,
   commentContent: string | null = null,
+  vibeType?:      string | null,
 ): string {
   switch (type) {
     case 'vibe':
+      if (vibeType && vibeType in VIBE_COPY) {
+        return VIBE_COPY[vibeType as VibeType].text(actorName)
+      }
       return `${actorName} achou seu post uma vibe`
     case 'comment':
       return commentContent
@@ -68,23 +73,25 @@ export function notificationText(
   }
 }
 
-export function notificationEmoji(type: NotificationType): string {
+export function notificationEmoji(type: NotificationType, vibeType?: string | null): string {
   switch (type) {
-    case 'vibe':          return '🔥'
+    case 'vibe':
+      if (vibeType && vibeType in VIBE_COPY) return VIBE_COPY[vibeType as VibeType].emoji
+      return '🔥'
     case 'comment':       return '💬'
     case 'follow':        return '👑'
     case 'mention':       return '📣'
     case 'repost':        return '🔁'
     case 'follow_back':   return '💜'
     case 'comment_reply': return '↩️'
-    case 'comment_like':   return '❤️'
-    case 'message':        return '💬'
-    case 'group_message':  return '💬'
-    case 'story_like':       return '❤️'
-    case 'follow_request':   return '🔒'
-    case 'follow_accepted':    return '✅'
-    case 'community_post':     return '🏘️'
-    case 'community_comment':  return '💬'
+    case 'comment_like':  return '❤️'
+    case 'message':       return '💬'
+    case 'group_message': return '💬'
+    case 'story_like':    return '❤️'
+    case 'follow_request':  return '🔒'
+    case 'follow_accepted': return '✅'
+    case 'community_post':    return '🏘️'
+    case 'community_comment': return '💬'
   }
 }
 

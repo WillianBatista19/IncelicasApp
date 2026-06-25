@@ -135,7 +135,8 @@ create table notifications (
   post_id      uuid references posts (id) on delete cascade,
   comment_id   uuid references comments (id) on delete cascade,
   read         boolean not null default false,
-  created_at   timestamptz not null default now()
+  created_at   timestamptz not null default now(),
+  metadata     jsonb        -- e.g. {"vibe_type": "tomate"}
 );
 
 -- ============================================================
@@ -162,8 +163,9 @@ create or replace function create_notification(
   p_user_id      uuid,
   p_from_user_id uuid,
   p_type         notification_type,
-  p_post_id      uuid default null,
-  p_comment_id   uuid default null
+  p_post_id      uuid  default null,
+  p_comment_id   uuid  default null,
+  p_metadata     jsonb default null
 )
 returns void
 language plpgsql
@@ -174,8 +176,8 @@ begin
     return;
   end if;
 
-  insert into notifications (user_id, from_user_id, type, post_id, comment_id)
-  values (p_user_id, p_from_user_id, p_type, p_post_id, p_comment_id);
+  insert into notifications (user_id, from_user_id, type, post_id, comment_id, metadata)
+  values (p_user_id, p_from_user_id, p_type, p_post_id, p_comment_id, p_metadata);
 end;
 $$;
 
@@ -192,7 +194,14 @@ declare
   v_post_owner uuid;
 begin
   select user_id into v_post_owner from posts where id = new.post_id;
-  perform create_notification(v_post_owner, new.user_id, 'vibe', new.post_id);
+  perform create_notification(
+    v_post_owner,
+    new.user_id,
+    'vibe',
+    new.post_id,
+    null,
+    jsonb_build_object('vibe_type', new.type::text)
+  );
   return new;
 end;
 $$;

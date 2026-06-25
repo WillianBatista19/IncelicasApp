@@ -45,6 +45,16 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/(app)/communities/musica/avaliar/page.js"
+    ],
+    "/(app)/notifications/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/notifications/page.js"
+    ],
+    "/(app)/post/[id]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/post/[id]/page.js"
     ]
   }
 }

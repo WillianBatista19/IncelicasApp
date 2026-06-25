@@ -4,7 +4,7 @@ import NotificationsClient from '@/components/notifications/NotificationsClient'
 import type { NotificationRow } from '@/types'
 
 const NOTIF_SELECT = `
-  id, type, post_id, comment_id, read, created_at,
+  id, type, post_id, comment_id, read, created_at, metadata,
   from_profile:from_user_id (display_name, username, avatar_url),
   post:post_id        (content),
   comment:comment_id  (content)
