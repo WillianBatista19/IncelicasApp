@@ -1,9 +1,8 @@
 {
+  "/api/lastfm/route": "app/api/lastfm/route.js",
   "/icon.svg/route": "app/icon.svg/route.js",
-  "/(app)/communities/page": "app/(app)/communities/page.js",
-  "/(app)/jogar/page": "app/(app)/jogar/page.js",
-  "/(app)/communities/musica/grammy/page": "app/(app)/communities/musica/grammy/page.js",
-  "/(app)/profile/edit/page": "app/(app)/profile/edit/page.js",
+  "/api/spotify/albums/route": "app/api/spotify/albums/route.js",
   "/(app)/profile/[username]/page": "app/(app)/profile/[username]/page.js",
+  "/(app)/profile/edit/page": "app/(app)/profile/edit/page.js",
   "/(app)/communities/[slug]/page": "app/(app)/communities/[slug]/page.js"
 }

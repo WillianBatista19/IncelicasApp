@@ -51,6 +51,11 @@ export interface Profile {
   goodreads_rating:      number | null
   favorite_film:         WatchingNow | null
   favorite_book:         ReadingNow  | null
+  awaited_album_id:           string | null
+  awaited_album_name:         string | null
+  awaited_album_artist:       string | null
+  awaited_album_cover:        string | null
+  awaited_album_release_datetime: string | null
 }
 
 export interface Vibe {

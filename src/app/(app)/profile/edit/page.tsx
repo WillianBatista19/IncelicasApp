@@ -10,7 +10,7 @@ export default async function EditProfilePage() {
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id, username, display_name, avatar_url, bio, created_at, is_private, lastfm_username, watching_now, reading_now, anime_title, anime_cover_url, steam_id, goodreads_book_title, goodreads_book_author, goodreads_cover_url, goodreads_rating, favorite_film, favorite_book')
+    .select('id, username, display_name, avatar_url, bio, created_at, is_private, lastfm_username, watching_now, reading_now, anime_title, anime_cover_url, steam_id, goodreads_book_title, goodreads_book_author, goodreads_cover_url, goodreads_rating, favorite_film, favorite_book, awaited_album_id, awaited_album_name, awaited_album_artist, awaited_album_cover, awaited_album_release_datetime')
     .eq('id', user.id)
     .single()
 

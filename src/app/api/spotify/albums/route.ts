@@ -66,8 +66,18 @@ export async function GET(req: NextRequest) {
     const q = req.nextUrl.searchParams.get('q')
     if (!q) return NextResponse.json({ error: 'Missing q' }, { status: 400 })
 
-    const res = await fetch(
-      `https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=album&limit=8&market=BR`,
+    const limitParam = Number(req.nextUrl.searchParams.get('limit'))
+    const limit = Number.isFinite(limitParam) && limitParam >= 1
+      ? Math.min(Math.floor(limitParam), 50)
+      : 8
+
+    const spotifyUrl = new URL('https://api.spotify.com/v1/search')
+    spotifyUrl.searchParams.set('q', q)
+    spotifyUrl.searchParams.set('type', 'album')
+    spotifyUrl.searchParams.set('limit', String(limit))
+    spotifyUrl.searchParams.set('market', 'BR')
+
+    const res = await fetch(spotifyUrl.toString(),
       { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' },
     )
 
@@ -83,6 +93,7 @@ export async function GET(req: NextRequest) {
       artist:      a.artists[0]?.name ?? '',
       cover:       a.images[0]?.url ?? null,
       year:        a.release_date?.split('-')[0] ?? null,
+      releaseDate: a.release_date ?? null,
       totalTracks: a.total_tracks,
     }))
 

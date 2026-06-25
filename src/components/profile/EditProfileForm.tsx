@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Avatar from '@/components/Avatar'
@@ -15,6 +15,67 @@ function parseJsonField<T>(raw: unknown): T | null {
   if (!raw) return null
   if (typeof raw === 'string') { try { return JSON.parse(raw) as T } catch { return null } }
   return raw as T
+}
+
+type AlbumResult = {
+  id:          string
+  name:        string
+  artist:      string
+  cover:       string | null
+  releaseDate: string  // ISO datetime, e.g. "2026-07-18T00:00:00-03:00"
+  isManual?:   boolean
+}
+
+type LastfmResult = {
+  name:   string
+  artist: string
+  cover:  string | null
+}
+
+type CommunitySuggestion = {
+  name:        string
+  artist:      string
+  cover:       string | null
+  releaseDate: string
+  count:       number
+}
+
+// Converts a Spotify partial date to midnight Brazil time ISO string
+function normalizeReleaseDate(d: string): string {
+  const parts = d.split('-')
+  if (parts.length === 1) return `${parts[0]}-12-31T00:00:00-03:00`
+  if (parts.length === 2) return `${parts[0]}-${parts[1]}-01T00:00:00-03:00`
+  return `${d}T00:00:00-03:00`
+}
+
+function formatReleaseDateTime(iso: string, showTime = false): string {
+  try {
+    const d = new Date(iso)
+    if (isNaN(d.getTime())) return iso
+    const date = d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric' })
+    if (!showTime) return date
+    const time = d.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' })
+    return `${date} às ${time}`
+  } catch {
+    return iso
+  }
+}
+
+function isFutureRelease(releaseDate: string | null): boolean {
+  if (!releaseDate) return false
+  // Use Brazil timezone so the comparison is correct for users in São Paulo
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }) // YYYY-MM-DD
+  const parts = releaseDate.split('-')
+  if (parts.length === 1) {
+    // "2026" — future if year >= current year
+    return parseInt(parts[0]) >= parseInt(today.substring(0, 4))
+  }
+  if (parts.length === 2) {
+    // "2026-07" — compare YYYY-MM so same-month albums are still shown
+    return releaseDate >= today.substring(0, 7)
+  }
+  // "2026-07-18" — strictly after today
+  return releaseDate > today
 }
 
 type GoodreadsData = {
@@ -81,6 +142,31 @@ export default function EditProfileForm({ profile }: { profile: Profile }) {
   const [showFavoriteBookSearch, setShowFavoriteBookSearch] = useState(false)
   const [isPrivate, setIsPrivate] = useState(profile.is_private ?? false)
 
+  const [awaitedAlbum, setAwaitedAlbum] = useState<AlbumResult | null>(
+    profile.awaited_album_name && profile.awaited_album_release_datetime
+      ? {
+          id:          profile.awaited_album_id ?? '',
+          name:        profile.awaited_album_name,
+          artist:      profile.awaited_album_artist ?? '',
+          cover:       profile.awaited_album_cover ?? null,
+          releaseDate: profile.awaited_album_release_datetime,
+        }
+      : null,
+  )
+  const [awaitedAlbumQuery,     setAwaitedAlbumQuery]     = useState('')
+  const [awaitedAlbumResults,   setAwaitedAlbumResults]   = useState<AlbumResult[]>([])
+  const [awaitedAlbumSearching, setAwaitedAlbumSearching] = useState(false)
+  const [showManualEntry,   setShowManualEntry]   = useState(false)
+  const [manualName,        setManualName]        = useState('')
+  const [manualArtist,      setManualArtist]      = useState('')
+  const [manualDate,        setManualDate]        = useState('')
+  const [manualTime,        setManualTime]        = useState('00:00')
+  const [manualCoverMode,   setManualCoverMode]   = useState<'search' | 'url' | null>(null)
+  const [manualCoverUrl,    setManualCoverUrl]    = useState('')
+  const [lastfmResults,       setLastfmResults]       = useState<LastfmResult[]>([])
+  const [lastfmSearching,     setLastfmSearching]     = useState(false)
+  const [communitySuggestions, setCommunitySuggestions] = useState<CommunitySuggestion[]>([])
+
   const fileRef  = useRef<HTMLInputElement>(null)
   const supabase = useMemo(() => createClient(), [])
   const router   = useRouter()
@@ -133,6 +219,121 @@ export default function EditProfileForm({ profile }: { profile: Profile }) {
       setGoodreadsCover(parsed.cover_url)
       setGoodreadsRating(parsed.rating)
     }
+  }
+
+  useEffect(() => {
+    const q = awaitedAlbumQuery.trim()
+    if (!q) { setAwaitedAlbumResults([]); return }
+    setAwaitedAlbumSearching(true)
+    const timer = setTimeout(async () => {
+      try {
+        const res  = await fetch(`/api/spotify/albums?action=search&q=${encodeURIComponent(q)}&limit=20`)
+        const json = await res.json() as { albums?: { id: string; name: string; artist: string; cover: string | null; releaseDate: string | null }[] }
+        const future = (json.albums ?? [])
+          .filter(a => isFutureRelease(a.releaseDate))
+          .map(a => ({
+            id:          a.id,
+            name:        a.name,
+            artist:      a.artist,
+            cover:       a.cover,
+            releaseDate: normalizeReleaseDate(a.releaseDate!),
+          }))
+        setAwaitedAlbumResults(future)
+      } finally {
+        setAwaitedAlbumSearching(false)
+      }
+    }, 450)
+    return () => clearTimeout(timer)
+  }, [awaitedAlbumQuery])
+
+  useEffect(() => {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+    supabase
+      .from('profiles')
+      .select('awaited_album_name, awaited_album_artist, awaited_album_cover, awaited_album_release_datetime')
+      .not('awaited_album_name', 'is', null)
+      .neq('id', profile.id)
+      .gte('awaited_album_release_datetime', today)
+      .limit(100)
+      .then(({ data }) => {
+        if (!data) return
+        const map = new Map<string, CommunitySuggestion>()
+        for (const p of data) {
+          if (!p.awaited_album_name || !p.awaited_album_release_datetime) continue
+          const key = `${p.awaited_album_name.toLowerCase()}|||${(p.awaited_album_artist ?? '').toLowerCase()}`
+          const ex = map.get(key)
+          if (ex) { ex.count++ } else {
+            map.set(key, {
+              name:        p.awaited_album_name,
+              artist:      p.awaited_album_artist ?? '',
+              cover:       p.awaited_album_cover  ?? null,
+              releaseDate: p.awaited_album_release_datetime,
+              count:       1,
+            })
+          }
+        }
+        setCommunitySuggestions(
+          Array.from(map.values()).sort((a, b) => b.count - a.count).slice(0, 8)
+        )
+      })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function handleSearchLastfmCovers() {
+    setManualCoverMode('search')
+    setLastfmResults([])
+    const q = [manualName.trim(), manualArtist.trim()].filter(Boolean).join(' ')
+    if (!q) return
+    setLastfmSearching(true)
+    try {
+      const key = process.env.NEXT_PUBLIC_LASTFM_API_KEY
+      const url = `https://ws.audioscrobbler.com/2.0/?method=album.search&album=${encodeURIComponent(q)}&api_key=${key}&format=json&limit=10`
+      const res  = await fetch(url)
+      const json = await res.json() as {
+        results?: {
+          albummatches?: {
+            album?: Array<{ name: string; artist: string; image: Array<{ '#text': string; size: string }> }>
+          }
+        }
+      }
+      const LASTFM_PLACEHOLDER = '2a96cbd8b46e442fc41c2b86b821562f.png'
+      const results: LastfmResult[] = (json.results?.albummatches?.album ?? [])
+        .map(a => ({
+          name:   a.name,
+          artist: a.artist,
+          cover:  a.image?.find(i => i.size === 'extralarge')?.['#text']
+               || a.image?.find(i => i.size === 'large')?.['#text']
+               || null,
+        }))
+        .filter(a => a.cover && !a.cover.includes(LASTFM_PLACEHOLDER))
+      setLastfmResults(results)
+    } catch {
+      setLastfmResults([])
+    } finally {
+      setLastfmSearching(false)
+    }
+  }
+
+  function handleManualConfirm() {
+    if (!manualName.trim() || !manualArtist.trim() || !manualDate) return
+    const time = manualTime || '00:00'
+    const isoDateTime = `${manualDate}T${time}:00-03:00`
+    setAwaitedAlbum({
+      id:          '',
+      name:        manualName.trim(),
+      artist:      manualArtist.trim(),
+      cover:       manualCoverUrl.trim() || null,
+      releaseDate: isoDateTime,
+      isManual:    true,
+    })
+    setShowManualEntry(false)
+    setManualName('')
+    setManualArtist('')
+    setManualDate('')
+    setManualTime('00:00')
+    setManualCoverMode(null)
+    setManualCoverUrl('')
+    setLastfmResults([])
   }
 
   function handleUsernameChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -201,6 +402,11 @@ export default function EditProfileForm({ profile }: { profile: Profile }) {
         favorite_film:         favoriteFilm,
         favorite_book:         favoriteBook,
         is_private:            isPrivate,
+        awaited_album_id:           awaitedAlbum?.id           ?? null,
+        awaited_album_name:         awaitedAlbum?.name         ?? null,
+        awaited_album_artist:       awaitedAlbum?.artist       ?? null,
+        awaited_album_cover:        awaitedAlbum?.cover        ?? null,
+        awaited_album_release_datetime: awaitedAlbum?.releaseDate  ?? null,
       })
       .eq('id', profile.id)
 
@@ -662,6 +868,255 @@ export default function EditProfileForm({ profile }: { profile: Profile }) {
                 Buscar anime ou manga
               </button>
             )}
+          </FormField>
+
+          <FormField label="Álbum aguardado ⏳">
+            {awaitedAlbum ? (
+              /* ── Selected album preview ── */
+              <div className="flex items-center gap-3 rounded-xl border border-zinc-700 bg-zinc-800/50 p-3">
+                {awaitedAlbum.cover ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={awaitedAlbum.cover} alt="" className="h-14 w-14 flex-shrink-0 rounded-lg object-cover" />
+                ) : (
+                  <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-xl">🎵</div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <p className="truncate text-sm font-medium text-zinc-100">{awaitedAlbum.name}</p>
+                    {awaitedAlbum.isManual && (
+                      <span className="shrink-0 rounded-full bg-[#7F77DD]/20 px-1.5 py-0.5 text-[10px] text-[#7F77DD]">manual</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-zinc-500">{awaitedAlbum.artist}</p>
+                  <p className="text-xs text-[#D4537E]">🗓 {formatReleaseDateTime(awaitedAlbum.releaseDate, true)}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setAwaitedAlbum(null); setShowManualEntry(false) }}
+                  className="flex-shrink-0 rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-red-400 transition-colors hover:border-red-800/60"
+                >
+                  Remover
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {/* ── Spotify search ── */}
+                {!showManualEntry && (
+                  <>
+                    <input
+                      value={awaitedAlbumQuery}
+                      onChange={e => setAwaitedAlbumQuery(e.target.value)}
+                      placeholder="Buscar álbum futuro no Spotify…"
+                      className="input-base"
+                    />
+                    {awaitedAlbumSearching && (
+                      <p className="text-xs text-zinc-500">Buscando…</p>
+                    )}
+                    {!awaitedAlbumSearching && awaitedAlbumQuery.trim() && awaitedAlbumResults.length === 0 && (
+                      <p className="text-xs text-zinc-600">
+                        Não encontramos álbuns futuros com esse nome. O Spotify nem sempre indexa pré-lançamentos antes da data oficial.
+                      </p>
+                    )}
+                    {awaitedAlbumResults.length > 0 && (
+                      <ul className="max-h-56 overflow-y-auto rounded-xl border border-zinc-700 bg-zinc-800 p-1 space-y-0.5">
+                        {awaitedAlbumResults.map(a => (
+                          <li key={a.id}>
+                            <button
+                              type="button"
+                              onClick={() => { setAwaitedAlbum(a); setAwaitedAlbumQuery(''); setAwaitedAlbumResults([]) }}
+                              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-zinc-700"
+                            >
+                              {a.cover ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={a.cover} alt="" className="h-10 w-10 flex-shrink-0 rounded-md object-cover" />
+                              ) : (
+                                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md bg-zinc-700 text-lg">🎵</div>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-medium text-zinc-100">{a.name}</p>
+                                <p className="truncate text-xs text-zinc-500">{a.artist}</p>
+                              </div>
+                              <span className="flex-shrink-0 text-xs text-[#D4537E]">{formatReleaseDateTime(a.releaseDate)}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {/* Toggle manual entry */}
+                    <button
+                      type="button"
+                      onClick={() => { setShowManualEntry(true); setAwaitedAlbumQuery(''); setAwaitedAlbumResults([]) }}
+                      className="text-xs text-zinc-500 hover:text-[#7F77DD] transition-colors underline underline-offset-2"
+                    >
+                      Não encontrou? Adicionar manualmente
+                    </button>
+
+                    {/* Community suggestions */}
+                    {communitySuggestions.length > 0 && awaitedAlbumResults.length === 0 && !awaitedAlbumSearching && (
+                      <div className="mt-1">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">
+                          💡 Aguardados pela comunidade
+                        </p>
+                        <ul className="space-y-0.5 rounded-xl border border-zinc-800 bg-zinc-900/60 p-1">
+                          {communitySuggestions.map((s, i) => (
+                            <li key={i}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAwaitedAlbum({ id: '', name: s.name, artist: s.artist, cover: s.cover, releaseDate: s.releaseDate })
+                                }}
+                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-zinc-800"
+                              >
+                                {s.cover ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={s.cover} alt="" className="h-9 w-9 shrink-0 rounded-md object-cover" />
+                                ) : (
+                                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-zinc-800 text-base">🎵</div>
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm text-zinc-100">{s.name}</p>
+                                  <p className="truncate text-xs text-zinc-500">{s.artist}</p>
+                                </div>
+                                <span className="shrink-0 rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-500">
+                                  {s.count} {s.count === 1 ? 'pessoa' : 'pessoas'}
+                                </span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* ── Manual entry form ── */}
+                {showManualEntry && (
+                  <div className="space-y-3 rounded-xl border border-[#7F77DD]/30 bg-[#7F77DD]/5 p-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold text-[#7F77DD]">Entrada manual</p>
+                      <button
+                        type="button"
+                        onClick={() => { setShowManualEntry(false); setManualName(''); setManualArtist(''); setManualDate(''); setManualTime('00:00'); setManualCoverMode(null); setManualCoverUrl(''); setLastfmResults([]) }}
+                        className="text-xs text-zinc-500 hover:text-zinc-300"
+                      >
+                        ✕ Cancelar
+                      </button>
+                    </div>
+
+                    <input
+                      value={manualName}
+                      onChange={e => setManualName(e.target.value)}
+                      placeholder="Nome do álbum"
+                      className="input-base"
+                    />
+                    <input
+                      value={manualArtist}
+                      onChange={e => setManualArtist(e.target.value)}
+                      placeholder="Artista"
+                      className="input-base"
+                    />
+
+                    {/* Date + time row */}
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <label className="mb-1 block text-[10px] text-zinc-500">Data de lançamento</label>
+                        <input
+                          type="date"
+                          value={manualDate}
+                          onChange={e => setManualDate(e.target.value)}
+                          min={new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })}
+                          className="input-base w-full"
+                        />
+                      </div>
+                      <div className="w-28">
+                        <label className="mb-1 block text-[10px] text-zinc-500">Horário de Brasília (UTC-3)</label>
+                        <input
+                          type="time"
+                          value={manualTime}
+                          onChange={e => setManualTime(e.target.value)}
+                          className="input-base w-full"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Cover options */}
+                    <div>
+                      <p className="mb-1.5 text-[10px] text-zinc-500">Capa (opcional)</p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={handleSearchLastfmCovers}
+                          className={`rounded-lg border px-3 py-1.5 text-xs transition-colors ${manualCoverMode === 'search' ? 'border-[#7F77DD] text-[#7F77DD]' : 'border-zinc-700 text-zinc-400 hover:text-zinc-300'}`}
+                        >
+                          🔍 Buscar via Last.fm
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setManualCoverMode('url'); setLastfmResults([]) }}
+                          className={`rounded-lg border px-3 py-1.5 text-xs transition-colors ${manualCoverMode === 'url' ? 'border-[#7F77DD] text-[#7F77DD]' : 'border-zinc-700 text-zinc-400 hover:text-zinc-300'}`}
+                        >
+                          🔗 Colar URL
+                        </button>
+                      </div>
+
+                      {/* Last.fm results */}
+                      {manualCoverMode === 'search' && (
+                        <div className="mt-2">
+                          {lastfmSearching && <p className="text-xs text-zinc-500">Buscando capas…</p>}
+                          {!lastfmSearching && lastfmResults.length === 0 && (
+                            <p className="text-xs text-zinc-600">Nenhuma capa encontrada. Preencha o nome e artista e tente novamente.</p>
+                          )}
+                          {lastfmResults.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {lastfmResults.map((r, i) => (
+                                <button
+                                  key={i}
+                                  type="button"
+                                  onClick={() => { setManualCoverUrl(r.cover!); setManualCoverMode('url') }}
+                                  title={`${r.name} — ${r.artist}`}
+                                  className={`relative h-14 w-14 overflow-hidden rounded-lg border-2 transition-all ${manualCoverUrl === r.cover ? 'border-[#D4537E]' : 'border-transparent hover:border-zinc-500'}`}
+                                >
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={r.cover!} alt="" className="h-full w-full object-cover" />
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* URL input */}
+                      {manualCoverMode === 'url' && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <input
+                            value={manualCoverUrl}
+                            onChange={e => setManualCoverUrl(e.target.value)}
+                            placeholder="https://…"
+                            className="input-base flex-1 text-xs"
+                          />
+                          {manualCoverUrl && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={manualCoverUrl} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleManualConfirm}
+                      disabled={!manualName.trim() || !manualArtist.trim() || !manualDate}
+                      className="btn-primary w-full disabled:opacity-40"
+                    >
+                      Confirmar
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            <p className="mt-1 text-xs text-zinc-600">
+              Mostra uma contagem regressiva no perfil para o lançamento que você está esperando.
+            </p>
           </FormField>
 
         </div>

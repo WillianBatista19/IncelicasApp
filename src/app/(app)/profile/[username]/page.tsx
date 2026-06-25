@@ -7,6 +7,7 @@ import LastfmWidget from '@/components/profile/LastfmWidget'
 import SteamWidget from '@/components/profile/SteamWidget'
 import GoodreadsWidget from '@/components/profile/GoodreadsWidget'
 import { AccordionRoot, AccordionSection } from '@/components/profile/ProfileAccordion'
+import AwaitedAlbumCountdown from '@/components/profile/AwaitedAlbumCountdown'
 import type { WatchingNow, ReadingNow } from '@/types'
 
 type Props = {
@@ -92,7 +93,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id, username, display_name, avatar_url, bio, created_at, is_private, lastfm_username, watching_now, reading_now, anime_title, anime_cover_url, steam_id, goodreads_book_title, goodreads_book_author, goodreads_cover_url, goodreads_rating, favorite_film, favorite_book')
+    .select('id, username, display_name, avatar_url, bio, created_at, is_private, lastfm_username, watching_now, reading_now, anime_title, anime_cover_url, steam_id, goodreads_book_title, goodreads_book_author, goodreads_cover_url, goodreads_rating, favorite_film, favorite_book, awaited_album_id, awaited_album_name, awaited_album_artist, awaited_album_cover, awaited_album_release_datetime')
     .eq('username', username)
     .single()
 
@@ -168,7 +169,8 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const hasAnime        = !!profile.anime_title
   const hasGoodreads    = !!profile.goodreads_book_title
   const hasAlbumRatings = !!(albumRatings?.length)
-  const hasAny          = hasMusic || hasMedia || hasReading || hasGaming || hasAnime || hasGoodreads || hasAlbumRatings
+  const hasAwaitedAlbum = !!(profile.awaited_album_name && profile.awaited_album_release_datetime)
+  const hasAny          = hasMusic || hasMedia || hasReading || hasGaming || hasAnime || hasGoodreads || hasAlbumRatings || hasAwaitedAlbum
 
   return (
     <div className="space-y-4 pb-12">
@@ -184,6 +186,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
         initialFollowerCount={followerCount}
         followingCount={followingCount}
         openStory={searchParams.openStory === 'true'}
+        awaitedAlbumName={profile.awaited_album_name ?? null}
       />
 
       {/* Follow requests — only visible to own private profile */}
@@ -201,7 +204,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
         <>
 
       {hasAny && (
-        <AccordionRoot defaultDesktopOpen={['music']}>
+        <AccordionRoot defaultDesktopOpen={['music', ...(hasAwaitedAlbum ? ['awaited'] : [])]}>
           {hasMusic && (
             <AccordionSection id="music" label="🎵 Música">
               <LastfmWidget username={profile.lastfm_username as string} />
@@ -248,6 +251,17 @@ export default async function ProfilePage({ params, searchParams }: Props) {
                 author={profile.goodreads_book_author as string | null}
                 coverUrl={profile.goodreads_cover_url  as string | null}
                 rating={profile.goodreads_rating       as number | null}
+              />
+            </AccordionSection>
+          )}
+
+          {hasAwaitedAlbum && (
+            <AccordionSection id="awaited" label="⏳ Aguardando lançamento">
+              <AwaitedAlbumCountdown
+                albumName={profile.awaited_album_name as string}
+                albumArtist={profile.awaited_album_artist as string ?? ''}
+                albumCover={profile.awaited_album_cover as string | null}
+                releaseDateTime={profile.awaited_album_release_datetime as string}
               />
             </AccordionSection>
           )}

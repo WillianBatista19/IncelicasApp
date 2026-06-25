@@ -10,9 +10,19 @@ import CommunityPostComposer from './CommunityPostComposer'
 import MembersTab from './MembersTab'
 import JoinButton from './JoinButton'
 import CommunityAvatarModal from './CommunityAvatarModal'
+import AwaitedAlbumsTab from './AwaitedAlbumsTab'
+import type { AwaitedAlbum } from './AwaitedAlbumsTab'
 import { toggleNotificationsMuted } from '@/app/(app)/communities/actions'
 
-type Tab = 'posts' | 'members' | 'jogos'
+type Tab = 'posts' | 'members' | 'jogos' | 'aguardados'
+
+export type MaisAguardado = {
+  albumName:   string
+  artistName:  string
+  coverUrl:    string | null
+  releaseDate: string | null
+  memberCount: number
+}
 
 const GAMES = [
   {
@@ -50,11 +60,13 @@ interface Props {
   canPost:            boolean
   notificationsMuted: boolean
   activeSurvivorEvent?: { album_name: string; artist_name: string; current_round: number } | null
+  awaitedAlbums?:      AwaitedAlbum[]
+  maisAguardados?:     MaisAguardado[]
 }
 
 export default function CommunityPageClient({
   community, posts, members, currentUserId, viewerRole, canPost, notificationsMuted,
-  activeSurvivorEvent,
+  activeSurvivorEvent, awaitedAlbums = [], maisAguardados = [],
 }: Props) {
   const router = useRouter()
   const { isShortcutted, addShortcut, removeShortcut, shortcuts } = useUser()
@@ -214,16 +226,38 @@ export default function CommunityPageClient({
         </div>
       </div>
 
+      {/* Mais aguardados — Música only */}
+      {community.slug === 'musica' && maisAguardados.length > 0 && (
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3">
+          <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+            ⏳ Mais aguardados pela comunidade
+          </p>
+          <div className="space-y-2">
+            {maisAguardados.map((a, i) => (
+              <MaisAguardadoCard key={i} album={a} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-zinc-800">
-        {(['posts', 'members', ...(community.slug === 'musica' ? ['jogos' as Tab] : [])] as Tab[]).map(t => (
+      <div className="flex gap-1 border-b border-zinc-800 overflow-x-auto scrollbar-none">
+        {(
+          ['posts', 'members', ...(community.slug === 'musica' ? ['jogos' as Tab, 'aguardados' as Tab] : [])] as Tab[]
+        ).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium transition
+            className={`shrink-0 px-4 py-2 text-sm font-medium transition
               ${tab === t ? 'text-[#D4537E] border-b-2 border-[#D4537E]' : 'text-zinc-400 hover:text-white'}`}
           >
-            {t === 'posts' ? 'Posts' : t === 'members' ? `Membros (${members.length})` : '🎮 Jogos'}
+            {t === 'posts'
+              ? 'Posts'
+              : t === 'members'
+              ? `Membros (${members.length})`
+              : t === 'jogos'
+              ? '🎮 Jogos'
+              : '⏳ Aguardados'}
           </button>
         ))}
       </div>
@@ -302,6 +336,15 @@ export default function CommunityPageClient({
         </div>
       )}
 
+      {tab === 'aguardados' && (
+        <AwaitedAlbumsTab
+          communityId={community.id}
+          initialAlbums={awaitedAlbums}
+          currentUserId={currentUserId}
+          isMember={isMember}
+        />
+      )}
+
       {tab === 'members' && (
         <MembersTab
           communityId={community.id}
@@ -325,6 +368,70 @@ export default function CommunityPageClient({
           {toast}
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── MaisAguardadoCard ────────────────────────────────────────────────────────
+
+function computeMaisAguardadoCd(dt: string) {
+  const target = /^\d{4}-\d{2}-\d{2}$/.test(dt)
+    ? new Date(dt + 'T00:00:00-03:00')
+    : new Date(dt)
+  const diff = target.getTime() - Date.now()
+  if (diff <= 0) return null
+  const s = Math.floor(diff / 1000)
+  return {
+    days:    Math.floor(s / 86400),
+    hours:   Math.floor((s % 86400) / 3600),
+    minutes: Math.floor((s % 3600) / 60),
+    seconds: s % 60,
+  }
+}
+
+function MaisAguardadoCard({ album }: { album: MaisAguardado }) {
+  const [cd, setCd] = useState(() =>
+    album.releaseDate ? computeMaisAguardadoCd(album.releaseDate) : null
+  )
+
+  useEffect(() => {
+    if (!album.releaseDate) return
+    const id = setInterval(() => setCd(computeMaisAguardadoCd(album.releaseDate!)), 1000)
+    return () => clearInterval(id)
+  }, [album.releaseDate])
+
+  const p = (n: number) => String(n).padStart(2, '0')
+
+  return (
+    <div className="flex items-center gap-3">
+      {album.coverUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={album.coverUrl}
+          alt={album.albumName}
+          className="h-10 w-10 shrink-0 rounded-lg object-cover"
+        />
+      ) : (
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-base">
+          🎵
+        </div>
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium text-zinc-100">{album.albumName}</p>
+        <p className="truncate text-xs text-zinc-500">{album.artistName}</p>
+      </div>
+      <div className="shrink-0 text-right">
+        <p className="text-[10px] text-zinc-600 mb-0.5">
+          {album.memberCount} {album.memberCount === 1 ? 'membro' : 'membros'}
+        </p>
+        {cd ? (
+          <p className="font-mono text-xs tabular-nums text-[#D4537E]">
+            {cd.days > 0 ? `${cd.days}d ` : ''}{p(cd.hours)}:{p(cd.minutes)}:{p(cd.seconds)}
+          </p>
+        ) : (
+          <p className="text-xs text-[#1D9E75]">🎉 Lançou!</p>
+        )}
+      </div>
     </div>
   )
 }
