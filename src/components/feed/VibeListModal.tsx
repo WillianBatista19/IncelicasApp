@@ -22,20 +22,31 @@ type VibeUser = {
 // ─── constants ────────────────────────────────────────────────────────────────
 
 const VIBE_EMOJI: Record<VibeType, string> = {
-  serving: '🔥',
-  morrei:  '💀',
-  iconic:  '👑',
-  cha:     '☕',
-  hype:    '🌊',
+  serving:  '🔥',
+  morrei:   '💀',
+  iconic:   '👑',
+  tomate:   '🍅',
+  coco:     '💩',
+  gag:      '🤯',
+  old:      '🦕',
+  sixseven: '6️⃣7️⃣',
+  cha:      '☕',   // legacy
+  hype:     '🌊',  // legacy
 }
 
+// Tabs auto-hide when count === 0, so legacy ones only appear on old posts.
 const TABS: { id: VibeType | 'all'; label: string }[] = [
-  { id: 'all',     label: 'Todos' },
-  { id: 'serving', label: '🔥 Serving' },
-  { id: 'morrei',  label: '💀 Morri' },
-  { id: 'iconic',  label: '👑 Iconic' },
-  { id: 'cha',     label: '☕ Chá' },
-  { id: 'hype',    label: '🌊 No Hype' },
+  { id: 'all',      label: 'Todos'          },
+  { id: 'serving',  label: '🔥 Serving'     },
+  { id: 'morrei',   label: '💀 Morri'       },
+  { id: 'iconic',   label: '👑 Iconic'      },
+  { id: 'tomate',   label: '🍅 Tomate'      },
+  { id: 'coco',     label: '💩 Cocô'        },
+  { id: 'gag',      label: '🤯 Gag'         },
+  { id: 'old',      label: '🦕 Old'         },
+  { id: 'sixseven', label: '6️⃣7️⃣ Six Seven' },
+  { id: 'cha',      label: '☕ Chá'         },
+  { id: 'hype',     label: '🌊 No Hype'     },
 ]
 
 // ─── component ────────────────────────────────────────────────────────────────

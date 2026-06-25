@@ -26,18 +26,20 @@ export function useVibeCheck(
     setPending(v)
   }
 
-  // Sync incoming realtime updates from other users.
-  // Only skipped if our own operation is in flight (pendingRef guards it
-  // without adding `pending` to the dep array, which was the flicker cause).
   useEffect(() => {
     if (!pendingRef.current) setVibes(initialVibes)
-  }, [initialVibes])                          // ← intentionally omits pending
+  }, [initialVibes])  // intentionally omits pending
 
   const myVibe = vibes.find((v) => v.user_id === currentUserId) ?? null
 
   const counts: VibeCounts = useMemo(() => {
-    const map: VibeCounts = { serving: 0, morrei: 0, iconic: 0, cha: 0, hype: 0 }
-    for (const v of vibes) map[v.type]++
+    const map: VibeCounts = {
+      serving: 0, morrei: 0, iconic: 0, tomate: 0, coco: 0, gag: 0, old: 0, sixseven: 0,
+      cha: 0, hype: 0,  // legacy
+    }
+    for (const v of vibes) {
+      if (v.type in map) map[v.type]++
+    }
     return map
   }, [vibes])
 
@@ -83,8 +85,6 @@ export function useVibeCheck(
     }
 
     setpending(false)
-    // pendingRef is now false; the next initialVibes change (the realtime
-    // echo confirming our write) will sync the real server id into state.
   }
 
   return { counts, myVibe, pending, react, total: vibes.length }

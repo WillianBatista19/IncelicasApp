@@ -1,4 +1,22 @@
-import type { NotificationType } from '@/types'
+import type { NotificationType, VibeType } from '@/types'
+
+// Per-vibe notification copy. Used by triggers or future client-side notifications.
+export const VIBE_COPY: Record<VibeType, { text: (name: string) => string; emoji: string }> = {
+  serving:  { text: (n) => `${n} achou seu post uma brasa`,      emoji: '🔥'    },
+  morrei:   { text: (n) => `${n} morreu no seu post`,            emoji: '💀'    },
+  iconic:   { text: (n) => `${n} coroou seu post`,               emoji: '👑'    },
+  tomate:   { text: (n) => `${n} jogou um tomate no seu post`,   emoji: '🍅'    },
+  coco:     { text: (n) => `${n} deixou um cocô no seu post`,    emoji: '💩'    },
+  gag:      { text: (n) => `${n} ficou gag com seu post`,        emoji: '🤯'    },
+  old:      { text: (n) => `${n} achou seu post old`,            emoji: '🦕'    },
+  sixseven: { text: (n) => `${n} deu six seven no seu post`,     emoji: '6️⃣7️⃣' },
+  cha:      { text: (n) => `${n} derramou o chá no seu post`,    emoji: '☕'    },
+  hype:     { text: (n) => `${n} entrou na onda do seu post`,    emoji: '🌊'    },
+}
+
+export function vibeNotificationText(vibeType: VibeType, actorName: string): string {
+  return VIBE_COPY[vibeType]?.text(actorName) ?? `${actorName} achou seu post uma vibe`
+}
 
 function excerpt(text: string, max = 60) {
   const trimmed = text.trim()

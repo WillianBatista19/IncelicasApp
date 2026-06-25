@@ -24,8 +24,13 @@ export function useCommunityVibeCheck(
   const myVibe = vibes.find(v => v.user_id === currentUserId) ?? null
 
   const counts: VibeCounts = useMemo(() => {
-    const map: VibeCounts = { serving: 0, morrei: 0, iconic: 0, cha: 0, hype: 0 }
-    for (const v of vibes) map[v.type]++
+    const map: VibeCounts = {
+      serving: 0, morrei: 0, iconic: 0, tomate: 0, coco: 0, gag: 0, old: 0, sixseven: 0,
+      cha: 0, hype: 0,  // legacy
+    }
+    for (const v of vibes) {
+      if (v.type in map) map[v.type]++
+    }
     return map
   }, [vibes])
 

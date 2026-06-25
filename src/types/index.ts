@@ -1,5 +1,6 @@
 export type Category         = 'anime' | 'bbb' | 'musica' | 'serie' | 'filme' | 'livro'
-export type VibeType         = 'serving' | 'morrei' | 'iconic' | 'cha' | 'hype'
+// Active UI vibes (8). 'cha' and 'hype' are legacy — kept for old data, not shown in buttons.
+export type VibeType = 'serving' | 'morrei' | 'iconic' | 'tomate' | 'coco' | 'gag' | 'old' | 'sixseven' | 'cha' | 'hype'
 export type NotificationType =
   | 'follow'
   | 'follow_back'
