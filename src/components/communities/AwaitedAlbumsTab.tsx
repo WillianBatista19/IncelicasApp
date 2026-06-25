@@ -1,442 +1,298 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { addAwaitedAlbum, toggleAlbumVote } from '@/app/(app)/communities/musica/awaited-albums/actions'
 
-export interface AwaitedAlbum {
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export type WaiterProfile = {
   id:           string
-  album_id:     string
-  album_name:   string
-  artist_name:  string
-  cover_url:    string | null
-  release_date: string | null
-  vote_count:   number
-  user_voted:   boolean
+  username:     string
+  display_name: string | null
+  avatar_url:   string | null
 }
 
-interface SpotifyResult {
-  id:          string
-  name:        string
-  artist:      string
-  cover:       string | null
-  releaseDate: string | null
+export type AwaitedAlbumGroup = {
+  albumName:   string
+  artistName:  string
+  coverUrl:    string | null
+  releaseDate: string | null   // ISO datetime or YYYY-MM-DD
+  memberCount: number
+  members:     WaiterProfile[]
 }
 
 interface Props {
-  communityId:   string
-  initialAlbums: AwaitedAlbum[]
+  groups:        AwaitedAlbumGroup[]
   currentUserId: string | null
-  isMember:      boolean
 }
 
-function daysUntil(dateStr: string): number | null {
-  const target = new Date(dateStr + 'T00:00:00')
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const GRACE_MS = 24 * 60 * 60 * 1000  // 24 h grace period after release
+
+function parseRelease(dt: string): Date {
+  return /^\d{4}-\d{2}-\d{2}$/.test(dt)
+    ? new Date(dt + 'T00:00:00-03:00')
+    : new Date(dt)
+}
+
+type CdState =
+  | { kind: 'future';   days: number; hours: number; minutes: number; seconds: number }
+  | { kind: 'released' }   // within grace period
+  | { kind: 'expired'  }   // > 24 h past release
+
+function getCountdown(dt: string): CdState {
+  const target = parseRelease(dt)
   const diff   = target.getTime() - Date.now()
-  if (diff <= 0) return null
-  return Math.ceil(diff / 86_400_000)
+  if (diff > 0) {
+    const s = Math.floor(diff / 1000)
+    return {
+      kind:    'future',
+      days:    Math.floor(s / 86400),
+      hours:   Math.floor((s % 86400) / 3600),
+      minutes: Math.floor((s % 3600) / 60),
+      seconds: s % 60,
+    }
+  }
+  return -diff <= GRACE_MS ? { kind: 'released' } : { kind: 'expired' }
 }
 
-function isReleased(dateStr: string | null): boolean {
-  if (!dateStr) return false
-  return new Date(dateStr + 'T00:00:00').getTime() <= Date.now()
+function pad(n: number) { return String(n).padStart(2, '0') }
+
+function wantUrl(g: AwaitedAlbumGroup): string {
+  let url = `/profile/edit?section=awaited&awaited_name=${encodeURIComponent(g.albumName)}&awaited_artist=${encodeURIComponent(g.artistName)}`
+  if (g.coverUrl)    url += `&awaited_cover=${encodeURIComponent(g.coverUrl)}`
+  if (g.releaseDate) url += `&awaited_datetime=${encodeURIComponent(g.releaseDate)}`
+  url += '#section-awaited'
+  return url
 }
 
-function isFutureRelease(releaseDate: string | null): boolean {
-  if (!releaseDate) return false
-  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
-  const parts = releaseDate.split('-')
-  if (parts.length === 1) return parseInt(parts[0]) >= parseInt(today.substring(0, 4))
-  if (parts.length === 2) return releaseDate >= today.substring(0, 7)
-  return releaseDate > today
-}
+// ─── Avatar stack + popover ───────────────────────────────────────────────────
 
-function normalizeReleaseDate(d: string): string {
-  const parts = d.split('-')
-  if (parts.length === 1) return `${parts[0]}-12-31`
-  if (parts.length === 2) return `${parts[0]}-${parts[1]}-01`
-  return d
-}
-
-// ─── Add Album Modal ──────────────────────────────────────────────────────────
-
-function AddAlbumModal({
-  albums,
-  onAdd,
-  onClose,
-}: {
-  albums:  AwaitedAlbum[]
-  onAdd:   (album: SpotifyResult) => Promise<void>
-  onClose: () => void
-}) {
-  const [query,     setQuery]     = useState('')
-  const [results,   setResults]   = useState<SpotifyResult[]>([])
-  const [searching, setSearching] = useState(false)
-  const [adding,    setAdding]    = useState(false)
-  const [msg,       setMsg]       = useState<string | null>(null)
+function AvatarStack({ members, albumName }: { members: WaiterProfile[]; albumName: string }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const q = query.trim()
-    if (!q) { setResults([]); return }
-    setSearching(true)
-    const timer = setTimeout(async () => {
-      try {
-        const res  = await fetch(`/api/spotify/albums?action=search&q=${encodeURIComponent(q)}&limit=20`)
-        const json = await res.json() as { albums?: { id: string; name: string; artist: string; cover: string | null; releaseDate: string | null }[] }
-        const future = (json.albums ?? []).filter(a => isFutureRelease(a.releaseDate))
-        setResults(future as SpotifyResult[])
-      } finally {
-        setSearching(false)
-      }
-    }, 450)
-    return () => clearTimeout(timer)
-  }, [query])
-
-  async function handleSelect(a: SpotifyResult) {
-    const existing = albums.find(al => al.album_id === a.id)
-    if (existing) {
-      setMsg('Esse álbum já está na lista! Role para baixo e vote nele. 🔥')
-      return
+    if (!open) return
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
-    setAdding(true)
-    setMsg(null)
-    await onAdd({ ...a, releaseDate: a.releaseDate ? normalizeReleaseDate(a.releaseDate) : null })
-    setAdding(false)
-  }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [open])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/70" onClick={onClose}>
-      <div
-        className="w-full max-w-md rounded-2xl bg-zinc-900 border border-zinc-800 p-5 space-y-4"
-        onClick={e => e.stopPropagation()}
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-800 px-2 py-1 text-[10px] text-zinc-400 transition-colors hover:border-zinc-500 hover:text-zinc-200"
       >
-        <div className="flex items-center justify-between">
-          <h2 className="font-bold text-zinc-100">Adicionar álbum aguardado</h2>
-          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300 text-xl leading-none">✕</button>
-        </div>
+        <span className="flex -space-x-1.5">
+          {members.slice(0, 3).map(m =>
+            m.avatar_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={m.id}
+                src={m.avatar_url}
+                alt=""
+                className="h-4 w-4 rounded-full border border-zinc-800 object-cover"
+              />
+            ) : (
+              <div
+                key={m.id}
+                className="flex h-4 w-4 items-center justify-center rounded-full border border-zinc-800 bg-zinc-700 text-[8px] font-semibold text-zinc-400"
+              >
+                {(m.display_name ?? m.username).charAt(0).toUpperCase()}
+              </div>
+            )
+          )}
+        </span>
+        {members.length} {members.length === 1 ? 'membro' : 'membros'}
+      </button>
 
-        <input
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder="Buscar álbum futuro no Spotify…"
-          className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 outline-none focus:border-[#D4537E]"
-          autoFocus
-        />
-
-        {msg && (
-          <p className="text-sm text-amber-400">{msg}</p>
-        )}
-
-        {searching && (
-          <p className="text-xs text-zinc-500">Buscando…</p>
-        )}
-
-        {!searching && query.trim() && results.length === 0 && !msg && (
-          <p className="text-xs text-zinc-600">
-            Não encontramos álbuns futuros com esse nome. Tente buscar pelo nome exato do álbum ou artista.
-            O Spotify nem sempre indexa pré-lançamentos antes da divulgação oficial.
+      {open && (
+        <div className="absolute top-full mt-1.5 right-0 z-20 w-48 rounded-xl border border-zinc-700 bg-zinc-900 p-2 shadow-xl">
+          <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+            Aguardando {albumName}
           </p>
-        )}
-
-        {results.length > 0 && (
-          <ul className="max-h-64 overflow-y-auto space-y-1 rounded-xl border border-zinc-700 bg-zinc-800 p-1">
-            {results.map(a => (
-              <li key={a.id}>
-                <button
-                  type="button"
-                  disabled={adding}
-                  onClick={() => handleSelect(a)}
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-zinc-700 disabled:opacity-50"
+          <ul className="max-h-44 space-y-0.5 overflow-y-auto">
+            {members.map(m => (
+              <li key={m.id}>
+                <Link
+                  href={`/profile/${m.username}`}
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-zinc-800"
                 >
-                  {a.cover ? (
+                  {m.avatar_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={a.cover} alt="" className="h-10 w-10 shrink-0 rounded-md object-cover" />
+                    <img src={m.avatar_url} alt="" className="h-6 w-6 rounded-full object-cover" />
                   ) : (
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-zinc-700 text-lg">🎵</div>
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-700 text-xs font-semibold text-zinc-400">
+                      {(m.display_name ?? m.username).charAt(0).toUpperCase()}
+                    </div>
                   )}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-zinc-100">{a.name}</p>
-                    <p className="truncate text-xs text-zinc-500">{a.artist}</p>
-                  </div>
-                  {a.releaseDate && (
-                    <span className="shrink-0 text-xs text-[#D4537E]">{a.releaseDate}</span>
-                  )}
-                </button>
+                  <span className="truncate text-xs text-zinc-200">
+                    {m.display_name ?? m.username}
+                  </span>
+                </Link>
               </li>
             ))}
           </ul>
-        )}
-
-        <p className="text-xs text-zinc-600">
-          Só aparecem álbuns com data de lançamento no futuro. Ao adicionar, seu voto é automático.
-        </p>
-      </div>
+        </div>
+      )}
     </div>
   )
 }
 
-// ─── Album Card ───────────────────────────────────────────────────────────────
+// ─── Album card ───────────────────────────────────────────────────────────────
 
-function AlbumCard({
-  album,
-  onVote,
-  canVote,
-  voting,
-}: {
-  album:   AwaitedAlbum
-  onVote:  () => void
-  canVote: boolean
-  voting:  boolean
-}) {
-  const released = isReleased(album.release_date)
-  const days     = album.release_date ? daysUntil(album.release_date) : null
+function AlbumGroupCard({ group, rank }: { group: AwaitedAlbumGroup; rank: number }) {
+  const [cd, setCd] = useState<CdState>(() =>
+    group.releaseDate ? getCountdown(group.releaseDate) : { kind: 'expired' }
+  )
+
+  useEffect(() => {
+    if (!group.releaseDate) return
+    const id = setInterval(() => setCd(getCountdown(group.releaseDate!)), 1000)
+    return () => clearInterval(id)
+  }, [group.releaseDate])
+
+  // After 24 h grace: hide silently
+  if (cd.kind === 'expired') return null
 
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
-      {album.cover_url ? (
+    <div className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
+      {/* Rank */}
+      <span className="w-4 shrink-0 text-center text-xs font-medium text-zinc-600">{rank}</span>
+
+      {/* Cover */}
+      {group.coverUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={album.cover_url} alt={album.album_name} className="h-14 w-14 shrink-0 rounded-lg object-cover" />
+        <img
+          src={group.coverUrl}
+          alt={group.albumName}
+          className="h-14 w-14 shrink-0 rounded-lg object-cover"
+        />
       ) : (
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-2xl">🎵</div>
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-2xl">
+          🎵
+        </div>
       )}
 
+      {/* Info */}
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-zinc-100">{album.album_name}</p>
-        <p className="truncate text-xs text-zinc-500">{album.artist_name}</p>
-        {released ? (
-          <Link
-            href="/communities/musica/avaliar"
-            className="mt-0.5 inline-flex items-center gap-1 text-xs text-[#1D9E75] hover:underline"
-          >
-            🎉 Lançou! Avalie agora →
-          </Link>
-        ) : days !== null ? (
-          <p className="mt-0.5 text-xs text-[#D4537E]">⏳ {days} {days === 1 ? 'dia' : 'dias'}</p>
-        ) : album.release_date ? (
-          <p className="mt-0.5 text-xs text-zinc-600">{album.release_date}</p>
-        ) : null}
-      </div>
+        <p className="truncate text-sm font-semibold text-zinc-100">{group.albumName}</p>
+        <p className="truncate text-xs text-zinc-500 mb-1">{group.artistName}</p>
 
-      <div className="flex flex-col items-center gap-1 shrink-0">
-        <button
-          type="button"
-          onClick={onVote}
-          disabled={!canVote || voting}
-          className={[
-            'rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-40',
-            album.user_voted
-              ? 'bg-[#D4537E]/20 text-[#D4537E] border border-[#D4537E]/40 hover:bg-[#D4537E]/30'
-              : 'border border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200',
-          ].join(' ')}
-        >
-          {album.user_voted ? '🔥 Votei' : '🔥 Quero!'}
-        </button>
-        <span className="text-xs text-zinc-500">
-          {album.vote_count} {album.vote_count === 1 ? 'voto' : 'votos'}
-        </span>
-      </div>
-    </div>
-  )
-}
-
-// ─── Featured Card ────────────────────────────────────────────────────────────
-
-function FeaturedCard({ album }: { album: AwaitedAlbum }) {
-  const released = isReleased(album.release_date)
-  const days     = album.release_date ? daysUntil(album.release_date) : null
-
-  return (
-    <div className="rounded-xl border border-[#D4537E]/30 bg-gradient-to-br from-[#D4537E]/10 to-[#7F77DD]/10 p-4 space-y-3">
-      <p className="text-xs font-semibold uppercase tracking-wider text-[#D4537E]">
-        🏆 Mais aguardado pela comunidade
-      </p>
-
-      <div className="flex items-center gap-3">
-        {album.cover_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={album.cover_url} alt={album.album_name} className="h-16 w-16 shrink-0 rounded-xl object-cover shadow-lg" />
+        {cd.kind === 'released' ? (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="rounded-full bg-[#1D9E75]/20 px-2 py-0.5 text-[10px] font-semibold text-[#1D9E75]">
+              🎉 Lançado!
+            </span>
+            <Link
+              href="/communities/musica/avaliar"
+              className="text-[10px] text-zinc-500 transition-colors hover:text-zinc-300"
+            >
+              Avaliar agora →
+            </Link>
+          </div>
         ) : (
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-3xl">🎵</div>
+          <div className="flex items-center gap-1 font-mono text-xs tabular-nums text-[#D4537E]">
+            <span className="font-sans">⏳</span>
+            {cd.days > 0 && (
+              <>
+                <span className="font-bold text-zinc-100">{cd.days}</span>
+                <span className="font-sans text-zinc-500">{cd.days === 1 ? 'd ' : 'd '}</span>
+              </>
+            )}
+            <span>{pad(cd.hours)}:{pad(cd.minutes)}:{pad(cd.seconds)}</span>
+          </div>
         )}
-        <div className="min-w-0">
-          <p className="text-base font-bold text-zinc-100 truncate">{album.album_name}</p>
-          <p className="text-sm text-zinc-400">{album.artist_name}</p>
-          <p className="text-xs text-zinc-500 mt-0.5">
-            {album.vote_count} {album.vote_count === 1 ? 'incelica aguardando' : 'incelicas aguardando'}
-          </p>
-        </div>
       </div>
 
-      {released ? (
-        <div className="rounded-xl bg-[#1D9E75]/10 border border-[#1D9E75]/30 px-4 py-3 flex items-center justify-between">
-          <p className="text-sm font-semibold text-[#1D9E75]">🎉 {album.album_name} lançou!</p>
-          <Link
-            href="/communities/musica/avaliar"
-            className="text-xs font-semibold text-[#1D9E75] border border-[#1D9E75]/40 rounded-lg px-3 py-1.5 hover:bg-[#1D9E75]/20 transition-colors"
-          >
-            Avaliar →
-          </Link>
-        </div>
-      ) : days !== null ? (
-        <div className="flex items-center gap-2">
-          <span className="text-2xl font-bold tabular-nums text-zinc-100">{days}</span>
-          <span className="text-sm text-zinc-500">{days === 1 ? 'dia para o lançamento' : 'dias para o lançamento'}</span>
-        </div>
-      ) : null}
+      {/* Right: member stack + quero button */}
+      <div className="flex shrink-0 flex-col items-end gap-1.5">
+        <AvatarStack members={group.members} albumName={group.albumName} />
+        <Link
+          href={wantUrl(group)}
+          className="rounded-lg border border-[#7F77DD]/30 bg-[#7F77DD]/10 px-2.5 py-1 text-[10px] font-semibold text-[#7F77DD] transition-colors hover:bg-[#7F77DD]/20"
+        >
+          ➕ Quero também
+        </Link>
+      </div>
     </div>
   )
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// ─── Main component ───────────────────────────────────────────────────────────
 
-export default function AwaitedAlbumsTab({ communityId, initialAlbums, currentUserId, isMember }: Props) {
-  const router      = useRouter()
-  const [albums,     setAlbums]     = useState<AwaitedAlbum[]>(initialAlbums)
-  const [showModal,  setShowModal]  = useState(false)
-  const [votingId,   setVotingId]   = useState<string | null>(null)
-  const [toast,      setToast]      = useState<string | null>(null)
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+export default function AwaitedAlbumsTab({ groups, currentUserId }: Props) {
+  // Sort by memberCount desc, then releaseDate asc
+  const sorted = [...groups].sort(
+    (a, b) =>
+      b.memberCount - a.memberCount ||
+      (a.releaseDate ?? '').localeCompare(b.releaseDate ?? '')
+  )
 
-  // Sort descending by vote count, then by date ascending
-  const sorted   = [...albums].sort((a, b) => b.vote_count - a.vote_count || (a.release_date ?? '').localeCompare(b.release_date ?? ''))
-  const topAlbum = sorted[0] ?? null
-
-  function showToast(msg: string) {
-    if (toastTimer.current) clearTimeout(toastTimer.current)
-    setToast(msg)
-    toastTimer.current = setTimeout(() => setToast(null), 2500)
-  }
-
-  async function handleVote(album: AwaitedAlbum) {
-    if (!currentUserId || votingId) return
-
-    const prevAlbums = albums
-    const wasVoted   = album.user_voted
-    // Find if user currently voted for a different album
-    const prevVoted  = albums.find(a => a.user_voted && a.id !== album.id)
-
-    // Optimistic update
-    setAlbums(prev => prev.map(a => {
-      if (a.id === album.id) {
-        return { ...a, vote_count: wasVoted ? a.vote_count - 1 : a.vote_count + 1, user_voted: !wasVoted }
-      }
-      if (prevVoted && a.id === prevVoted.id && !wasVoted) {
-        return { ...a, vote_count: a.vote_count - 1, user_voted: false }
-      }
-      return a
-    }))
-
-    setVotingId(album.id)
-    const result = await toggleAlbumVote(communityId, album.id)
-    setVotingId(null)
-
-    if (result.error) {
-      setAlbums(prevAlbums)
-      showToast(result.error)
-    }
-  }
-
-  async function handleAdd(spotifyAlbum: SpotifyResult) {
-    const result = await addAwaitedAlbum(communityId, {
-      albumId:     spotifyAlbum.id,
-      albumName:   spotifyAlbum.name,
-      artistName:  spotifyAlbum.artist,
-      coverUrl:    spotifyAlbum.cover,
-      releaseDate: spotifyAlbum.releaseDate,
-    })
-
-    if (result.alreadyExists) {
-      setShowModal(false)
-      showToast('Esse álbum já está na lista! Vote nele. 🔥')
-      return
-    }
-    if (result.error) {
-      showToast(result.error)
-      return
-    }
-
-    setShowModal(false)
-    showToast('Álbum adicionado! 🎵')
-    router.refresh()
-  }
+  // Count visible (future + in grace period) for the header
+  const now = Date.now()
+  const visibleCount = sorted.filter(g => {
+    if (!g.releaseDate) return false
+    const t = parseRelease(g.releaseDate)
+    return now - t.getTime() <= GRACE_MS
+  }).length
 
   return (
     <div className="space-y-4">
 
-      {/* Featured album */}
-      {topAlbum && <FeaturedCard album={topAlbum} />}
-
-      {/* Header row */}
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-zinc-400">
-          {albums.length === 0
-            ? 'Nenhum álbum aguardado ainda'
-            : `${albums.length} ${albums.length === 1 ? 'álbum' : 'álbuns'} na lista`}
-        </h3>
-        {currentUserId && isMember && (
-          <button
-            type="button"
-            onClick={() => setShowModal(true)}
-            className="rounded-xl bg-[#D4537E]/10 border border-[#D4537E]/30 px-3 py-1.5 text-xs font-semibold text-[#D4537E] transition-colors hover:bg-[#D4537E]/20"
-          >
-            + Adicionar álbum
-          </button>
-        )}
+        <p className="text-xs text-zinc-500">
+          {visibleCount === 0
+            ? 'Nenhum álbum aguardado pelos membros'
+            : `${visibleCount} ${visibleCount === 1 ? 'álbum' : 'álbuns'} aguardados`}
+        </p>
+        <Link
+          href="/profile/edit?section=awaited#section-awaited"
+          className="rounded-xl border border-[#D4537E]/30 bg-[#D4537E]/10 px-3 py-1.5 text-xs font-semibold text-[#D4537E] transition-colors hover:bg-[#D4537E]/20"
+        >
+          ➕ Adicionar ao meu perfil
+        </Link>
       </div>
 
       {/* Album list */}
-      {albums.length === 0 ? (
+      {visibleCount === 0 ? (
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 px-6 py-12 text-center">
-          <p className="text-3xl mb-3">🎵</p>
-          <p className="text-sm text-zinc-400 font-semibold">Nenhum álbum aguardado ainda</p>
-          <p className="text-xs text-zinc-600 mt-1">
-            {isMember
-              ? 'Seja a primeira a adicionar um lançamento!'
-              : 'Entre na comunidade para sugerir álbuns.'}
+          <p className="mb-3 text-3xl">🎵</p>
+          <p className="text-sm font-semibold text-zinc-400">Nenhum álbum aguardado ainda</p>
+          <p className="mt-1 text-xs text-zinc-600">
+            Adicione um álbum que você está esperando no seu perfil!
           </p>
+          <Link
+            href="/profile/edit?section=awaited#section-awaited"
+            className="mt-4 inline-block rounded-xl border border-[#D4537E]/30 bg-[#D4537E]/10 px-4 py-2 text-xs font-semibold text-[#D4537E] transition-colors hover:bg-[#D4537E]/20"
+          >
+            ➕ Adicionar ao meu perfil
+          </Link>
         </div>
       ) : (
         <div className="space-y-2">
-          {sorted.map((album, i) => (
-            <div key={album.id} className="flex items-start gap-2">
-              <span className="mt-4 w-5 shrink-0 text-center text-xs text-zinc-600 font-medium">{i + 1}</span>
-              <div className="flex-1">
-                <AlbumCard
-                  album={album}
-                  onVote={() => handleVote(album)}
-                  canVote={!!currentUserId && isMember}
-                  voting={votingId === album.id}
-                />
-              </div>
-            </div>
+          {sorted.map((group, i) => (
+            <AlbumGroupCard
+              key={`${group.albumName}|||${group.artistName}`}
+              group={group}
+              rank={i + 1}
+            />
           ))}
         </div>
       )}
 
       {!currentUserId && (
-        <p className="text-center text-xs text-zinc-600 pt-2">
-          Faça login para votar ou sugerir álbuns.
+        <p className="pt-2 text-center text-xs text-zinc-600">
+          Faça login para adicionar o álbum que você está esperando ao seu perfil.
         </p>
-      )}
-      {currentUserId && !isMember && (
-        <p className="text-center text-xs text-zinc-600 pt-2">
-          Entre na comunidade para votar e sugerir álbuns.
-        </p>
-      )}
-
-      {showModal && (
-        <AddAlbumModal
-          albums={albums}
-          onAdd={handleAdd}
-          onClose={() => setShowModal(false)}
-        />
-      )}
-
-      {toast && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 whitespace-nowrap rounded-xl bg-zinc-800 px-4 py-2 text-sm text-white shadow-xl">
-          {toast}
-        </div>
       )}
     </div>
   )

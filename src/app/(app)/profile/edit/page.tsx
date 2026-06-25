@@ -3,7 +3,17 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import EditProfileForm from '@/components/profile/EditProfileForm'
 
-export default async function EditProfilePage() {
+interface Props {
+  searchParams?: {
+    awaited_name?:     string
+    awaited_artist?:   string
+    awaited_cover?:    string
+    awaited_datetime?: string
+    section?:          string
+  }
+}
+
+export default async function EditProfilePage({ searchParams }: Props) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -16,6 +26,15 @@ export default async function EditProfilePage() {
 
   if (profileError) throw new Error(`[profile/edit] DB error: ${profileError.message} (${profileError.code})`)
   if (!profile) redirect('/feed')
+
+  const prefilledAlbum = searchParams?.awaited_name
+    ? {
+        name:     searchParams.awaited_name,
+        artist:   searchParams.awaited_artist   ?? '',
+        cover:    searchParams.awaited_cover     ?? null,
+        datetime: searchParams.awaited_datetime  ?? '',
+      }
+    : undefined
 
   return (
     <div className="mx-auto max-w-lg pb-12">
@@ -32,7 +51,7 @@ export default async function EditProfilePage() {
         <h1 className="text-xl font-bold text-zinc-100">Editar perfil</h1>
       </div>
 
-      <EditProfileForm profile={profile} />
+      <EditProfileForm profile={profile} prefilledAlbum={prefilledAlbum} />
 
     </div>
   )

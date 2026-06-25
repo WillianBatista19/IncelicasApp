@@ -34,7 +34,6 @@ type Props = {
   initialFollowerCount:  number
   followingCount:        number
   openStory?:            boolean
-  awaitedAlbumName?:     string | null
 }
 
 export default function ProfileInteractive({
@@ -49,7 +48,6 @@ export default function ProfileInteractive({
   initialFollowerCount,
   followingCount,
   openStory = false,
-  awaitedAlbumName = null,
 }: Props) {
   const router = useRouter()
   const { signOut } = useUser()
@@ -246,13 +244,6 @@ export default function ProfileInteractive({
       {/* Bio */}
       {profile.bio && (
         <p className="mt-3 text-sm leading-relaxed text-zinc-300">{profile.bio}</p>
-      )}
-
-      {/* Awaited album badge */}
-      {awaitedAlbumName && (
-        <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-[#D4537E]/30 bg-[#D4537E]/10 px-3 py-1 text-xs text-[#D4537E]">
-          ⏳ Aguardando: {awaitedAlbumName}
-        </div>
       )}
 
       {/* Stats — followers and following are clickable unless content is blocked */}

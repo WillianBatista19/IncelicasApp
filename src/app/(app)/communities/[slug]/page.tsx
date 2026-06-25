@@ -1,8 +1,7 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import CommunityPageClient from '@/components/communities/CommunityPageClient'
-import type { MaisAguardado } from '@/components/communities/CommunityPageClient'
-import type { AwaitedAlbum } from '@/components/communities/AwaitedAlbumsTab'
+import type { AwaitedAlbumGroup, WaiterProfile } from '@/components/communities/AwaitedAlbumsTab'
 import type { Community, CommunityMemberRow, CommunityPost, CommunityRole } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -26,7 +25,7 @@ export default async function CommunityPage({ params }: Props) {
 
   const c = community as Community
 
-  const [postsRes, membersRes, viewerMemberRes, survivorRes, awaitedAlbumsRes, memberAlbumsRes] = await Promise.all([
+  const [postsRes, membersRes, viewerMemberRes, survivorRes, memberAlbumsRes] = await Promise.all([
     supabase
       .from('community_posts')
       .select(`
@@ -61,15 +60,13 @@ export default async function CommunityPage({ params }: Props) {
       : Promise.resolve({ data: null }),
     slug === 'musica'
       ? supabase
-          .from('community_awaited_albums')
-          .select('id, album_id, album_name, artist_name, cover_url, release_date, community_album_votes(id, user_id)')
-          .eq('community_id', c.id)
-          .order('created_at', { ascending: false })
-      : Promise.resolve({ data: null }),
-    slug === 'musica'
-      ? supabase
           .from('community_members')
-          .select('profiles!community_members_user_id_fkey(awaited_album_name, awaited_album_artist, awaited_album_cover, awaited_album_release_datetime)')
+          .select(`
+            profiles!community_members_user_id_fkey(
+              id, username, display_name, avatar_url,
+              awaited_album_name, awaited_album_artist, awaited_album_cover, awaited_album_release_datetime
+            )
+          `)
           .eq('community_id', c.id)
       : Promise.resolve({ data: null }),
   ])
@@ -94,64 +91,59 @@ export default async function CommunityPage({ params }: Props) {
   const canPost            = viewerMemberData?.can_post ?? false
   const notificationsMuted = viewerMemberData?.notifications_muted ?? false
 
-  type RawAwaitedAlbum = {
-    id:           string
-    album_id:     string
-    album_name:   string
-    artist_name:  string
-    cover_url:    string | null
-    release_date: string | null
-    community_album_votes: { id: string; user_id: string }[]
-  }
-
-  const rawAwaitedAlbums = (awaitedAlbumsRes as { data: RawAwaitedAlbum[] | null }).data ?? []
-  const awaitedAlbums: AwaitedAlbum[] = rawAwaitedAlbums.map(a => ({
-    id:           a.id,
-    album_id:     a.album_id,
-    album_name:   a.album_name,
-    artist_name:  a.artist_name,
-    cover_url:    a.cover_url,
-    release_date: a.release_date,
-    vote_count:   a.community_album_votes.length,
-    user_voted:   user ? a.community_album_votes.some(v => v.user_id === user.id) : false,
-  }))
-
   type RawMemberProfile = {
     profiles: {
-      awaited_album_name:         string | null
-      awaited_album_artist:       string | null
-      awaited_album_cover:        string | null
+      id:                             string
+      username:                       string
+      display_name:                   string | null
+      avatar_url:                     string | null
+      awaited_album_name:             string | null
+      awaited_album_artist:           string | null
+      awaited_album_cover:            string | null
       awaited_album_release_datetime: string | null
     } | null
   }
 
-  const rawMemberAlbums = (memberAlbumsRes as { data: RawMemberProfile[] | null }).data ?? []
-  const now = new Date()
-  const maisMap = new Map<string, MaisAguardado>()
+  const GRACE_MS   = 24 * 60 * 60 * 1000
+  const serverNow  = Date.now()
+  const rawMembers = (memberAlbumsRes as { data: RawMemberProfile[] | null }).data ?? []
+  const groupMap   = new Map<string, { meta: Omit<AwaitedAlbumGroup, 'memberCount' | 'members'>; members: WaiterProfile[] }>()
 
-  for (const row of rawMemberAlbums) {
+  for (const row of rawMembers) {
     const p = row.profiles
     if (!p?.awaited_album_name || !p.awaited_album_release_datetime) continue
-    const releaseDate = new Date(p.awaited_album_release_datetime)
-    if (isNaN(releaseDate.getTime()) || releaseDate <= now) continue
-    const key = `${p.awaited_album_name.toLowerCase()}|||${(p.awaited_album_artist ?? '').toLowerCase()}`
-    const ex = maisMap.get(key)
-    if (ex) {
-      ex.memberCount++
+    const dt     = p.awaited_album_release_datetime
+    const target = /^\d{4}-\d{2}-\d{2}$/.test(dt)
+      ? new Date(dt + 'T00:00:00-03:00')
+      : new Date(dt)
+    if (isNaN(target.getTime()) || serverNow - target.getTime() > GRACE_MS) continue
+
+    const key      = `${p.awaited_album_name.toLowerCase()}|||${(p.awaited_album_artist ?? '').toLowerCase()}`
+    const existing = groupMap.get(key)
+    const member: WaiterProfile = {
+      id:           p.id,
+      username:     p.username,
+      display_name: p.display_name,
+      avatar_url:   p.avatar_url,
+    }
+    if (existing) {
+      existing.members.push(member)
     } else {
-      maisMap.set(key, {
-        albumName:   p.awaited_album_name,
-        artistName:  p.awaited_album_artist ?? '',
-        coverUrl:    p.awaited_album_cover ?? null,
-        releaseDate: p.awaited_album_release_datetime,
-        memberCount: 1,
+      groupMap.set(key, {
+        meta: {
+          albumName:   p.awaited_album_name,
+          artistName:  p.awaited_album_artist ?? '',
+          coverUrl:    p.awaited_album_cover  ?? null,
+          releaseDate: p.awaited_album_release_datetime,
+        },
+        members: [member],
       })
     }
   }
 
-  const maisAguardados: MaisAguardado[] = Array.from(maisMap.values())
-    .sort((a, b) => b.memberCount - a.memberCount)
-    .slice(0, 3)
+  const awaitedAlbumGroups: AwaitedAlbumGroup[] = Array.from(groupMap.values())
+    .map(({ meta, members }) => ({ ...meta, memberCount: members.length, members }))
+    .sort((a, b) => b.memberCount - a.memberCount || (a.releaseDate ?? '').localeCompare(b.releaseDate ?? ''))
 
   return (
     <main className="max-w-2xl mx-auto px-4 py-6">
@@ -164,8 +156,7 @@ export default async function CommunityPage({ params }: Props) {
         canPost={canPost}
         notificationsMuted={notificationsMuted}
         activeSurvivorEvent={activeSurvivorEvent}
-        awaitedAlbums={awaitedAlbums}
-        maisAguardados={maisAguardados}
+        awaitedAlbumGroups={awaitedAlbumGroups}
       />
     </main>
   )

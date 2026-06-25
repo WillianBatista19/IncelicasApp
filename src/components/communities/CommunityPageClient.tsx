@@ -11,18 +11,11 @@ import MembersTab from './MembersTab'
 import JoinButton from './JoinButton'
 import CommunityAvatarModal from './CommunityAvatarModal'
 import AwaitedAlbumsTab from './AwaitedAlbumsTab'
-import type { AwaitedAlbum } from './AwaitedAlbumsTab'
+import type { AwaitedAlbumGroup } from './AwaitedAlbumsTab'
 import { toggleNotificationsMuted } from '@/app/(app)/communities/actions'
 
 type Tab = 'posts' | 'members' | 'jogos' | 'aguardados'
 
-export type MaisAguardado = {
-  albumName:   string
-  artistName:  string
-  coverUrl:    string | null
-  releaseDate: string | null
-  memberCount: number
-}
 
 const GAMES = [
   {
@@ -59,14 +52,13 @@ interface Props {
   viewerRole:         CommunityRole | null
   canPost:            boolean
   notificationsMuted: boolean
-  activeSurvivorEvent?: { album_name: string; artist_name: string; current_round: number } | null
-  awaitedAlbums?:      AwaitedAlbum[]
-  maisAguardados?:     MaisAguardado[]
+  activeSurvivorEvent?:  { album_name: string; artist_name: string; current_round: number } | null
+  awaitedAlbumGroups?:  AwaitedAlbumGroup[]
 }
 
 export default function CommunityPageClient({
   community, posts, members, currentUserId, viewerRole, canPost, notificationsMuted,
-  activeSurvivorEvent, awaitedAlbums = [], maisAguardados = [],
+  activeSurvivorEvent, awaitedAlbumGroups = [],
 }: Props) {
   const router = useRouter()
   const { isShortcutted, addShortcut, removeShortcut, shortcuts } = useUser()
@@ -226,14 +218,14 @@ export default function CommunityPageClient({
         </div>
       </div>
 
-      {/* Mais aguardados — Música only */}
-      {community.slug === 'musica' && maisAguardados.length > 0 && (
+      {/* Mais aguardados — top 3, Música only */}
+      {community.slug === 'musica' && awaitedAlbumGroups.length > 0 && (
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3">
           <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
             ⏳ Mais aguardados pela comunidade
           </p>
           <div className="space-y-2">
-            {maisAguardados.map((a, i) => (
+            {awaitedAlbumGroups.slice(0, 3).map((a, i) => (
               <MaisAguardadoCard key={i} album={a} />
             ))}
           </div>
@@ -338,10 +330,8 @@ export default function CommunityPageClient({
 
       {tab === 'aguardados' && (
         <AwaitedAlbumsTab
-          communityId={community.id}
-          initialAlbums={awaitedAlbums}
+          groups={awaitedAlbumGroups}
           currentUserId={currentUserId}
-          isMember={isMember}
         />
       )}
 
@@ -389,7 +379,7 @@ function computeMaisAguardadoCd(dt: string) {
   }
 }
 
-function MaisAguardadoCard({ album }: { album: MaisAguardado }) {
+function MaisAguardadoCard({ album }: { album: AwaitedAlbumGroup }) {
   const [cd, setCd] = useState(() =>
     album.releaseDate ? computeMaisAguardadoCd(album.releaseDate) : null
   )

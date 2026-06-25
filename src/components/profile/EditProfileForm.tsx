@@ -110,7 +110,17 @@ function parseGoodreadsWidget(html: string): GoodreadsData {
   return { cover_url, title, author, rating }
 }
 
-export default function EditProfileForm({ profile }: { profile: Profile }) {
+interface EditProfileFormProps {
+  profile: Profile
+  prefilledAlbum?: {
+    name:     string
+    artist:   string
+    cover:    string | null
+    datetime: string
+  } | null
+}
+
+export default function EditProfileForm({ profile, prefilledAlbum }: EditProfileFormProps) {
   const [displayName,        setDisplayName]        = useState(profile.display_name ?? '')
   const [username,           setUsername]           = useState(profile.username ?? '')
   const [bio,                setBio]                = useState(profile.bio ?? '')
@@ -143,15 +153,24 @@ export default function EditProfileForm({ profile }: { profile: Profile }) {
   const [isPrivate, setIsPrivate] = useState(profile.is_private ?? false)
 
   const [awaitedAlbum, setAwaitedAlbum] = useState<AlbumResult | null>(
-    profile.awaited_album_name && profile.awaited_album_release_datetime
+    prefilledAlbum?.name
       ? {
-          id:          profile.awaited_album_id ?? '',
-          name:        profile.awaited_album_name,
-          artist:      profile.awaited_album_artist ?? '',
-          cover:       profile.awaited_album_cover ?? null,
-          releaseDate: profile.awaited_album_release_datetime,
+          id:          '',
+          name:        prefilledAlbum.name,
+          artist:      prefilledAlbum.artist,
+          cover:       prefilledAlbum.cover,
+          releaseDate: prefilledAlbum.datetime,
+          isManual:    true,
         }
-      : null,
+      : profile.awaited_album_name && profile.awaited_album_release_datetime
+        ? {
+            id:          profile.awaited_album_id ?? '',
+            name:        profile.awaited_album_name,
+            artist:      profile.awaited_album_artist ?? '',
+            cover:       profile.awaited_album_cover ?? null,
+            releaseDate: profile.awaited_album_release_datetime,
+          }
+        : null,
   )
   const [awaitedAlbumQuery,     setAwaitedAlbumQuery]     = useState('')
   const [awaitedAlbumResults,   setAwaitedAlbumResults]   = useState<AlbumResult[]>([])
@@ -870,7 +889,7 @@ export default function EditProfileForm({ profile }: { profile: Profile }) {
             )}
           </FormField>
 
-          <FormField label="Álbum aguardado ⏳">
+          <FormField label="Álbum aguardado ⏳" id="section-awaited">
             {awaitedAlbum ? (
               /* ── Selected album preview ── */
               <div className="flex items-center gap-3 rounded-xl border border-zinc-700 bg-zinc-800/50 p-3">
@@ -1212,12 +1231,14 @@ export default function EditProfileForm({ profile }: { profile: Profile }) {
 function FormField({
   label,
   children,
+  id,
 }: {
   label:    string
   children: React.ReactNode
+  id?:      string
 }) {
   return (
-    <div className="space-y-1.5">
+    <div id={id} className="space-y-1.5 scroll-mt-6">
       <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
         {label}
       </p>
