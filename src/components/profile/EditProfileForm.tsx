@@ -1048,7 +1048,7 @@ export default function EditProfileForm({ profile, prefilledAlbum }: EditProfile
                         />
                       </div>
                       <div className="w-28">
-                        <label className="mb-1 block text-[10px] text-zinc-500">Horário de Brasília (UTC-3)</label>
+                        <label className="mb-1 block text-[10px] text-zinc-500">Horário de Brasília</label>
                         <input
                           type="time"
                           value={manualTime}
