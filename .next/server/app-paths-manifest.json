@@ -1,8 +1,6 @@
 {
-  "/page": "app/page.js",
-  "/icon.svg/route": "app/icon.svg/route.js",
   "/api/spotify/albums/route": "app/api/spotify/albums/route.js",
   "/(app)/communities/musica/avaliar/page": "app/(app)/communities/musica/avaliar/page.js",
-  "/(app)/feed/page": "app/(app)/feed/page.js",
-  "/(app)/communities/musica/avaliar/[albumId]/page": "app/(app)/communities/musica/avaliar/[albumId]/page.js"
+  "/(app)/communities/musica/avaliar/[albumId]/page": "app/(app)/communities/musica/avaliar/[albumId]/page.js",
+  "/(app)/communities/musica/avaliar/todos/page": "app/(app)/communities/musica/avaliar/todos/page.js"
 }

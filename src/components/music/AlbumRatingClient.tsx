@@ -659,6 +659,13 @@ export default function AlbumRatingClient({
               )}
             </section>
           )}
+
+          <Link
+            href="/communities/musica/avaliar/todos"
+            className="text-sm text-zinc-400 hover:text-white transition-colors text-center block mt-4"
+          >
+            Ver todas as avaliações →
+          </Link>
         </>
       )}
     </div>
