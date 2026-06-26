@@ -689,7 +689,7 @@ export default function SurvivorClient({
 
   const tracksToSemifinal = N - 3
   const countdownText = !tiebreakActive && N > 3
-    ? `${tracksToSemifinal} eliminação${tracksToSemifinal !== 1 ? 'ões' : ''} até a semifinal`
+    ? `${tracksToSemifinal} ${tracksToSemifinal === 1 ? 'eliminação' : 'eliminações'} até a semifinal`
     : null
 
   const advanceButtonLabel = isFinal

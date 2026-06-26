@@ -893,7 +893,7 @@ export default function BatalhaClient({
             maxTracks={maxTracks}
             totalParticipants={totalParticipants}
             artistName={activeEvent.artist_name}
-            isFinished={false}
+            isFinished={activeEvent.status === 'finished'}
           />
         )}
 
@@ -1083,6 +1083,11 @@ function ResultsView({
 
   return (
     <div className="space-y-6">
+      {/* Status label */}
+      <p className="text-xs text-zinc-400 text-center">
+        {isFinished ? '🏆 Resultado final' : '📊 Resultados em tempo real — atualiza conforme os votos chegam'}
+      </p>
+
       {/* Winner highlight - always visible */}
       <div className="flex items-center gap-3 p-4 rounded-xl bg-zinc-900 border border-yellow-500/30 mb-2">
         <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 bg-yellow-500 text-black">1</div>
@@ -1093,7 +1098,9 @@ function ResultsView({
           <p className="font-bold truncate">{rankedAlbums[0]?.album_name}</p>
           <p className="text-xs text-zinc-400">{artistName}</p>
         </div>
-        <span className="text-sm font-bold text-yellow-400 flex-shrink-0">{rankedAlbums[0]?.total_score ?? liveScores[rankedAlbums[0]?.id] ?? 0}pts</span>
+        <span className="text-sm font-bold text-yellow-400 flex-shrink-0">
+          {isFinished ? (rankedAlbums[0]?.total_score ?? 0) : (liveScores[rankedAlbums[0]?.id] ?? 0)}pts
+        </span>
       </div>
 
       {/* Other albums - hidden on mobile behind button */}
@@ -1107,7 +1114,9 @@ function ResultsView({
               <p className="font-semibold truncate text-sm">{album.album_name}</p>
               <p className="text-xs text-zinc-400">{artistName}</p>
             </div>
-            <span className="text-sm font-bold text-[#D4537E] flex-shrink-0">{album.total_score ?? liveScores[album.id] ?? 0}pts</span>
+            <span className="text-sm font-bold text-[#D4537E] flex-shrink-0">
+              {isFinished ? (album.total_score ?? 0) : (liveScores[album.id] ?? 0)}pts
+            </span>
           </div>
         ))}
       </div>
@@ -1130,7 +1139,9 @@ function ResultsView({
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold truncate text-sm">{album.album_name}</p>
                 </div>
-                <span className="text-xs font-bold text-[#D4537E] flex-shrink-0">{album.total_score ?? liveScores[album.id] ?? 0}pts</span>
+                <span className="text-xs font-bold text-[#D4537E] flex-shrink-0">
+                  {isFinished ? (album.total_score ?? 0) : (liveScores[album.id] ?? 0)}pts
+                </span>
               </div>
             ))}
           </div>
