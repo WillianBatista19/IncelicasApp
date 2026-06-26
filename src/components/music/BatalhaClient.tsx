@@ -969,17 +969,25 @@ export default function BatalhaClient({
                     </div>
                   )}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 md:flex-row md:flex-wrap">
                   {sorted.map((a, i) => (
-                    <div key={a.id} className="flex-1 text-center">
+                    <div key={a.id} className="flex items-center gap-3 p-3 rounded-xl bg-zinc-900 border border-zinc-800 md:flex-col md:text-center md:w-36">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+                        i === 0 ? 'bg-yellow-500 text-black' :
+                        i === 1 ? 'bg-zinc-400 text-black' :
+                        i === 2 ? 'bg-amber-700 text-white' :
+                        'bg-zinc-700 text-zinc-300'
+                      } md:mx-auto`}>{i + 1}</div>
                       {a.cover_url
-                        ? <Image src={a.cover_url} alt={a.album_name} width={48} height={48} className="w-full aspect-square rounded-lg object-cover" />
-                        : <div className="w-full aspect-square rounded-lg bg-zinc-800" />
+                        ? <Image src={a.cover_url} alt={a.album_name} width={148} height={148} className="w-14 h-14 md:w-full md:aspect-square rounded-lg object-cover flex-shrink-0" />
+                        : <div className="w-14 h-14 md:w-full md:aspect-square rounded-lg bg-zinc-800 flex-shrink-0" />
                       }
-                      <p className="text-xs text-zinc-400 mt-1 truncate">{a.album_name}</p>
-                      <p className={`text-xs font-bold ${i === 0 ? 'text-yellow-400' : 'text-zinc-500'}`}>
-                        {i + 1}º · {a.total_score}pts
-                      </p>
+                      <div className="flex-1 min-w-0 md:w-full">
+                        <p className="text-sm font-semibold truncate">{a.album_name}</p>
+                        <p className={`text-xs font-bold ${i === 0 ? 'text-yellow-400' : 'text-zinc-500'}`}>
+                          {i + 1}º · {a.total_score ?? 0}pts
+                        </p>
+                      </div>
                     </div>
                   ))}
                 </div>

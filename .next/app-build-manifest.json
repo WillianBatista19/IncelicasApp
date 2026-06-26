@@ -25,6 +25,11 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/(app)/communities/musica/batalha/page.js"
+    ],
+    "/(app)/notifications/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(app)/notifications/page.js"
     ]
   }
 }
