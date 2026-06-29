@@ -7,9 +7,9 @@ export const metadata: Metadata = {
   title:       'Zapli',
   description: 'A rede da galera — anime, BBB, música, séries, filmes e livros.',
   icons: {
-    icon:     '/logo.svg',
-    shortcut: '/logo.svg',
-    apple:    '/logo.svg',
+    icon:     '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple:    '/favicon.svg',
   },
 }
 

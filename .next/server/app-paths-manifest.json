@@ -1,10 +1,6 @@
 {
   "/icon.svg/route": "app/icon.svg/route.js",
-  "/api/spotify/artist/route": "app/api/spotify/artist/route.js",
-  "/status/page": "app/status/page.js",
-  "/changelog/page": "app/changelog/page.js",
-  "/(app)/feed/page": "app/(app)/feed/page.js",
-  "/(app)/profile/edit/page": "app/(app)/profile/edit/page.js",
+  "/api/lastfm/route": "app/api/lastfm/route.js",
   "/(app)/profile/[username]/page": "app/(app)/profile/[username]/page.js",
-  "/(app)/communities/musica/batalha/page": "app/(app)/communities/musica/batalha/page.js"
+  "/(app)/feed/page": "app/(app)/feed/page.js"
 }
