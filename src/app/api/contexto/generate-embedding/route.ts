@@ -10,7 +10,7 @@ const GEMINI_KEY       = process.env.GOOGLE_GEMINI_API_KEY!
 const GEMINI_SINGLE    = `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${GEMINI_KEY}`
 const GEMINI_BATCH     = `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents?key=${GEMINI_KEY}`
 const BATCH_SIZE       = 100
-const ADMIN_USERNAME   = 'incelicasappoficial'
+const ADMIN_USERNAME   = 'zaplioficial'
 
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = []

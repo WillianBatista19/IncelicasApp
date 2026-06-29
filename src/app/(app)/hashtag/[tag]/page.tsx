@@ -91,7 +91,7 @@ export default async function HashtagPage({
             <p className="mb-2 text-2xl">🔍</p>
             <p className="text-sm text-zinc-400">
               Nenhum post com <span className="font-semibold text-[#D4537E]">#{tag}</span> ainda.
-              Seja a primeira, incelica!
+              Seja a primeira, zapli!
             </p>
           </div>
         ) : (

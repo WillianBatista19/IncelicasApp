@@ -1,4 +1,4 @@
-# incelicas
+# zapli
 
 > Rede social completa desenvolvida do zero como projeto de estudo em desenvolvimento web fullstack.
 
@@ -10,9 +10,9 @@
 
 ## Sobre o projeto
 
-Incelicas é uma rede social temática desenvolvida para um grupo de amigos apaixonados por cultura pop — anime, BBB, música, séries, filmes e livros. O projeto nasceu como um desafio pessoal de aprender desenvolvimento web fullstack construindo algo real e funcional do zero.
+Zapli é uma rede social temática desenvolvida para um grupo de amigos apaixonados por cultura pop — anime, reality shows, música, séries, filmes e livros. O projeto nasceu como um desafio pessoal de aprender desenvolvimento web fullstack construindo algo real e funcional do zero.
 
-A proposta foi criar uma plataforma com identidade própria: em vez de curtidas genéricas, o sistema de **Vibe Check** permite reagir com emojis temáticos. Em vez de "republicar", os usuários **incelicam** os posts. Cada detalhe da linguagem e das notificações foi pensado para refletir a personalidade do grupo.
+A proposta foi criar uma plataforma com identidade própria: em vez de curtidas genéricas, o sistema de **Vibe Check** permite reagir com emojis temáticos. Em vez de "republicar", os usuários **zapliam** os posts. Cada detalhe da linguagem e das notificações foi pensado para refletir a personalidade do grupo.
 
 ## Stack tecnológica
 
@@ -25,7 +25,7 @@ A proposta foi criar uma plataforma com identidade própria: em vez de curtidas 
 | Deploy | Vercel |
 | Armazenamento | Supabase Storage |
 | Tempo real | Supabase Realtime |
-| NLP local | @xenova/transformers |
+| Similaridade semântica | Google Gemini Embeddings API |
 
 ## Funcionalidades
 
@@ -39,17 +39,16 @@ A proposta foi criar uma plataforma com identidade própria: em vez de curtidas 
 - Feed filtrado por hashtag
 - Feed personalizado: só aparecem posts de quem você segue + conta oficial
 - Scroll infinito com carregamento de 20 posts por vez
-- Lazy loading de imagens e vídeos para performance
 - Atualização em tempo real via Supabase Realtime
 - Salvar/favoritar posts com seção dedicada no perfil
 - Busca de posts por palavra-chave ou hashtag na página Explorar
 
 ### Vibe Check (sistema de reações)
-- Substitui o botão de curtida por 5 reações temáticas: 🔥 Serving, 💀 Morri, 👑 Iconic, ☕ Chá, 🌊 No Hype
+8 reações temáticas únicas:
+- 🔥 Serving, 💀 Morri, 👑 Iconic, 🍅 Tomate, 💩 Cocô, 🤯 Gag, 🦕 Old, 6️⃣7️⃣ Six Seven
 - Apenas uma vibe ativa por post — pode trocar a qualquer momento
-- Contagem individual por tipo de reação
 - Modal "ver quem reagiu" com abas por tipo de vibe
-- Atualização otimista da interface sem esperar resposta do servidor
+- Atualização otimista sem esperar resposta do servidor
 
 ### Comentários
 - Comentários e respostas em threads
@@ -57,75 +56,65 @@ A proposta foi criar uma plataforma com identidade própria: em vez de curtidas 
 - Menções com @ e autocomplete de usuários
 - Editar e excluir comentários próprios
 - Contagem total incluindo respostas aninhadas
-- Preview do comentário mais curtido sem abrir a seção
 
-### Incelicar (repost)
-- Repostar post de outra pessoa com um clique
-- Repostar com comentário próprio (quote post)
-- Contagem de incelicadas no post original
+### Zapliar (repost)
+- Zapliar post de outra pessoa com um clique
+- Zapliar com comentário próprio (quote post)
+- Contagem de zapliadas no post original
 - Notificação para o autor do post original
 
 ### Perfil de usuário
 - Foto de perfil, nome de exibição e bio
 - Perfil privado com solicitações de seguir (aceitar/recusar)
-- Contagem de posts, seguidores e seguindo
-- Lista de seguidores e seguindo com botão de seguir inline
 - Remover seguidores silenciosamente
+- Contagem de posts, seguidores e seguindo
 - Editar perfil com upload de foto
-- Excluir conta com confirmação
 - Menu de três pontinhos no mobile para ações do perfil
 
 ### Perfil expandido (accordion)
-Seções colapsáveis que organizam as integrações externas:
-- **🎵 Música** — Last.fm: ouvindo agora, top artistas e músicas da semana
+Seções colapsáveis com integrações externas:
+- **🎵 Música** — Last.fm: ouvindo agora, top artistas e músicas
 - **🎬 Mídia** — Assistindo agora e Filme favorito via TMDB
 - **📚 Leituras** — Lendo agora e Livro favorito via Google Books
 - **🎮 Gaming** — Steam: jogando agora e jogos recentes
 - **📺 Anime** — Anime favorito via AniList
 - **📖 Goodreads** — Livro atual via widget do Goodreads
+- **⏳ Aguardando** — Contagem regressiva para álbum aguardado
 
 ### Stories
 - Stories de 24 horas com imagem
-- Visualizador fullscreen com barra de progresso de 5 segundos
-- Avançar e voltar entre stories e entre usuários
-- Stories filtrados: só aparecem de quem você segue
-- Anel colorido para stories não visualizados, desbotado para visualizados
-- Curtidas em stories com contador e notificação
-- Lista de quem visualizou (para o dono do story)
-- Câmera ou galeria para postar story
+- Visualizador fullscreen com barra de progresso
+- Filtrados: só aparecem de quem você segue
+- Curtidas com contador e notificação
+- Lista de quem visualizou (para o dono)
 
 ### Sistema de seguir
 - Seguir e deixar de seguir usuários
-- Botão "Seguir de volta" quando o usuário já te segue
 - Perfis privados com solicitação de seguir
-- Contagem de seguidores e seguindo em tempo real
+- Botão "Seguir de volta" automático
 
 ### Notificações
-- Notificações em tempo real com badge de não lidas
-- Linguagem personalizada com trocadilhos das Incelicas
-- Clicar na notificação navega para o post ou perfil relacionado e marca como lida
-- Marcar todas como lidas com um clique
-- Tipos: vibe, seguidor, seguiu de volta, comentário, resposta, curtida em comentário, incelicada, menção, curtida em story, solicitação de seguir, aceite de solicitação, mensagem direta, mensagem em grupo, post em comunidade
+- Tempo real com badge de não lidas
+- Linguagem personalizada com gírias do Zapli
+- Clicar marca como lida e navega para o conteúdo
+- Tipos: vibe, seguidor, comentário, zapliada, menção, curtida em story, solicitação de seguir, mensagem, post em comunidade
 
 ### Mensagens diretas e grupos
-- Chat 1 a 1 em tempo real via Supabase Realtime
-- Grupos de mensagem com nome, foto e descrição
-- Criar grupos selecionando múltiplos usuários
+- Chat 1 a 1 em tempo real
+- Grupos com nome, foto e descrição
 - Gerenciar membros: adicionar, remover, promover a moderador
-- Editar nome e foto do grupo (criador)
 - Badge de mensagens não lidas na navbar
-- Marcar como lido ao abrir a conversa
 
 ### Comunidades
-Espaços temáticos isolados estilo Orkut — posts ficam dentro da comunidade:
+Espaços temáticos isolados estilo Orkut:
 - Criar comunidade com nome, descrição, avatar e banner
 - Feed exclusivo por comunidade
 - Compositor de posts com foto, vídeo, Spotify/YouTube e Last.fm
 - Permissões de postagem: todos, somente criador ou membros autorizados
 - Sistema de papéis: Criador, Moderador e Membro
-- Moderadores podem excluir posts e comentários
 - Vibe Check nos posts de comunidade
 - Silenciar notificações por comunidade
+- Álbuns mais aguardados pelos membros com contagem regressiva
 - Comunidades padrão: Música, Reality Shows, Fofocas, Séries, Filmes, Livros
 
 ### Jogos diários
@@ -133,90 +122,83 @@ Página `/jogar` com três desafios que renovam à meia-noite (horário de Bras�
 
 **🎵 Adivinhe a Música**
 - Ouça trechos crescentes: 1s → 2s → 4s → 8s → 16s → 30s
-- Autocomplete com busca no Deezer ao digitar o palpite
+- Autocomplete com busca no Deezer
 - 6 tentativas com pontuação decrescente (600 a 100 pontos)
-- Revela capa, título e artista ao final
-- Preview completo de 30s após encerrar
+- Upload manual de áudio pelo admin para músicas sem preview
 
-**🟩 Termo das Incelicas**
+**🟩 Termo do Zapli**
 - Wordle em português com palavras temáticas de cultura pop
-- 5 letras, 6 tentativas, algoritmo correto para letras duplicadas
-- Teclado virtual responsivo + teclado físico
-- Compartilhar resultado com grade de emojis
+- 5 letras, 6 tentativas
+- Células clicáveis — edite qualquer posição na palavra
+- Teclado virtual + teclado físico
 
 **🧠 Contexto**
 - Encontre a palavra secreta por similaridade semântica
 - Sem limite de tentativas
-- Similaridade calculada via embeddings com modelo multilingual local (@xenova/transformers)
-- Cores indicam proximidade: 🔴 longe → 🟠 → 🟡 → 🟢 → acertou
-- Zero custo recorrente — modelo roda no servidor sem API externa
+- Ranking por proximidade: quanto menor o número, mais perto
+- Similaridade via Google Gemini Embeddings API
 
 **Ranking**
-- Top 10 por pontuação total, música, termo e contexto separados
-- Posição do usuário sempre visível mesmo fora do top 10
+- Top 10 por pontuação total, música, termo e contexto
 
-### Jogos musicais nas comunidades
-Dentro da comunidade Música, aba Jogos:
+### Jogos musicais (Comunidade Música)
 
 **🎵 Avaliar Álbum**
-- Busque qualquer álbum pelo Spotify e avalie faixa por faixa de 0.0 a 10.0
+- Avalie faixa por faixa de 0.0 a 10.0
 - Marcadores especiais: Favorita, Melhor composição, Mais viciante, Melhor vocal, Melhor instrumental
-- Médias da comunidade por álbum e faixa
-- Rankings e seção de avaliações no perfil do usuário
+- Review em texto por álbum
+- Rankings: Top, Mais avaliados, Recentes, 2026, Todos
 
 **🎤 Survivor Musical**
 - Vote para eliminar a pior faixa de cada rodada
-- Votação às cegas, preview de 30s via Deezer
-- Regras de empate: eliminação em massa nas rodadas normais, mini-votação na semifinal, co-campeãs em empate na final
-- Notificações de eliminação com drama
+- Votação às cegas
+- Regras de empate inteligentes por fase (normal/semifinal/final)
+- Co-campeãs em empate na final
 
 **⚔️ Mata-Mata**
-- Torneio eliminatório com confrontos diretos entre faixas
+- Torneio eliminatório com confrontos diretos
 - Bracket visual com todas as rodadas
 - Fases: Oitavas, Quartas, Semifinal, Final
 
 **🏆 Batalha de Álbuns**
 - Compara múltiplos álbuns de um mesmo artista
 - Votação faixa por faixa por posição
-- Categorias extras: álbum favorito, melhor capa, melhores composições, melhor produção
-- Evento com duração configurável com resultados e estatísticas detalhadas
+- Categorias extras: álbum favorito, melhor capa, composições, produção
+- Resultado em tempo real durante votação
+
+**🏆 Grammy Predictions**
+- Vote em quem vai ganhar e quem deveria ganhar por categoria
+- Todas as 50 categorias do Grammy 2027 pré-cadastradas incluindo as 5 novas
+- Pontuação por acerto nas previsões
+- Ranking de melhores previsores
 
 ### Integrações externas
 
 | Serviço | Uso |
 |---|---|
 | Last.fm API | Música ouvindo agora, top artistas e músicas |
-| TMDB API | Busca de filmes e séries com pôster |
-| Google Books API | Busca de livros com capa |
-| AniList GraphQL | Busca de animes e mangas com capa |
-| Steam API | Jogo em andamento e histórico recente |
-| Goodreads | Widget de leitura atual via HTML embed |
-| Spotify API | Metadados de músicas, álbuns e artistas |
-| Deezer API | Preview de 30s gratuito para jogos musicais |
-| @xenova/transformers | Embeddings multilingual para o jogo Contexto |
+| TMDB API | Busca de filmes e séries |
+| Google Books API | Busca de livros |
+| AniList GraphQL | Busca de animes |
+| Steam API | Jogos em andamento e histórico |
+| Goodreads | Widget de leitura via HTML embed |
+| Spotify API | Músicas, álbuns e artistas |
+| Deezer API | Preview de 30s para jogos musicais |
+| Google Gemini API | Similaridade semântica para o Contexto |
 
-### Explorar
-- Busca de usuários por nome ou @
-- Busca de posts por palavra-chave ou hashtag
-- Trending de hashtags das últimas 24 horas
-- Sugestões de quem seguir e comunidades
+### Atalhos e navegação
+- Fixar comunidades e jogos favoritos na sidebar (desktop)
+- Bottom sheet "···" no mobile com acesso rápido a todas as seções
+- Toggle de tema claro/escuro no bottom sheet mobile
 
 ### Conta oficial e admin
-- Perfil `@incelicasappoficial` com badge verificado
-- Permissão de moderação: excluir posts, comentários e stories de qualquer usuário
-- Página `/jogar/admin` exclusiva para a conta oficial
+- Perfil `@zaplioficial` com badge verificado
+- Moderação: excluir posts, comentários e stories de qualquer usuário
+- `/jogar/admin`: adicionar músicas (Spotify ou upload manual), palavras do Termo e Contexto
 - Criar posts oficiais sem limite de caracteres
-- Adicionar músicas, palavras do Termo e palavras do Contexto
-- Adicionar entradas ao changelog (post oficial criado automaticamente)
+- Gerenciar changelog (post oficial criado automaticamente)
 - Gerenciar jogos musicais das comunidades
-
-### Páginas institucionais
-- `/status` — status do sistema e bugs conhecidos
-- `/changelog` — histórico de atualizações com versões e datas
-
-### Tema claro e escuro
-- Toggle sol/lua na navbar e no nav mobile
-- Preferência salva no localStorage
+- Gerenciar Grammy: criar edições, categorias, indicados e revelar vencedores
 
 ## Arquitetura
 
@@ -234,15 +216,18 @@ src/
       communities/
       communities/[slug]/
       communities/musica/avaliar/
+      communities/musica/avaliar/todos/
       communities/musica/survivor/
       communities/musica/mata-mata/
       communities/musica/batalha/
+      communities/musica/grammy/
       jogar/
       jogar/admin/
     (auth)/
     api/
       spotify/
       spotify/albums/
+      spotify/artist/
       steam/
       contexto/similarity/
       contexto/generate-embedding/
@@ -261,9 +246,9 @@ Principais tabelas no PostgreSQL via Supabase:
 
 | Tabela | Descrição |
 |---|---|
-| `profiles` | Perfis com integrações e configurações |
+| `profiles` | Perfis com integrações e álbum aguardado |
 | `posts` | Posts do feed com suporte a reposts |
-| `vibes` | Reações dos posts |
+| `vibes` | Reações dos posts (8 tipos) |
 | `comments` | Comentários e respostas |
 | `comment_likes` | Curtidas em comentários |
 | `follows` | Relações de seguir |
@@ -282,13 +267,15 @@ Principais tabelas no PostgreSQL via Supabase:
 | `community_posts` | Posts das comunidades |
 | `community_comments` | Comentários nos posts de comunidade |
 | `community_post_vibes` | Reações nos posts de comunidade |
+| `community_awaited_albums` | Álbuns aguardados votados na comunidade |
+| `community_album_votes` | Votos nos álbuns aguardados |
 | `daily_songs` | Banco de músicas para Adivinhe a Música |
 | `daily_words` | Banco de palavras para o Termo |
-| `contexto_words` | Palavras com embeddings para o Contexto |
+| `contexto_words` | Palavras do Contexto |
 | `contexto_attempts` | Tentativas do Contexto |
 | `game_attempts` | Tentativas dos jogos diários |
 | `game_scores` | Pontuação acumulada |
-| `album_ratings` | Avaliações de álbuns |
+| `album_ratings` | Avaliações de álbuns com review |
 | `track_ratings` | Notas por faixa |
 | `survivor_events` | Eventos do Survivor |
 | `survivor_tracks` | Faixas do Survivor |
@@ -301,6 +288,11 @@ Principais tabelas no PostgreSQL via Supabase:
 | `batalha_albums` | Álbuns participantes |
 | `batalha_track_votes` | Votos por posição de faixa |
 | `batalha_category_votes` | Votos nas categorias |
+| `grammy_editions` | Edições do Grammy |
+| `grammy_categories` | Categorias por edição |
+| `grammy_nominees` | Indicados por categoria |
+| `grammy_votes` | Previsões e desejos dos usuários |
+| `user_shortcuts` | Atalhos fixados na sidebar |
 | `changelog_entries` | Histórico de atualizações |
 
 Todas as tabelas têm Row Level Security (RLS) configurado.
@@ -314,8 +306,8 @@ Todas as tabelas têm Row Level Security (RLS) configurado.
 ### Instalação
 
 ```bash
-git clone https://github.com/WillianBatista19/IncelicasApp.git
-cd IncelicasApp
+git clone https://github.com/WillianBatista19/ZapliApp.git
+cd ZapliApp
 npm install
 ```
 
@@ -332,6 +324,8 @@ NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY=
 NEXT_PUBLIC_SPOTIFY_CLIENT_ID=
 SPOTIFY_CLIENT_SECRET=
 STEAM_API_KEY=
+GOOGLE_GEMINI_API_KEY=
+HUGGING_FACE_API_KEY=
 ```
 
 ### Banco de dados
@@ -354,6 +348,7 @@ Deploy automático no Vercel a cada push para `master`. Configure as variáveis 
 
 - [ ] Notificações push no celular (Web Push API)
 - [ ] PWA — instalar como app no celular
+- [ ] Ranking semântico real do Contexto via FastText
 
 ## Licença
 

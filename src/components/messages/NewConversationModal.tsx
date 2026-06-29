@@ -110,12 +110,12 @@ export default function NewConversationModal({ onClose }: { onClose: () => void 
           )}
           {!loading && query.trim() && results.length === 0 && (
             <p className="px-3 py-3 text-xs text-zinc-500">
-              Nenhuma incelica encontrada. Tenta outro nome.
+              Nenhuma zapli encontrada. Tenta outro nome.
             </p>
           )}
           {!query.trim() && (
             <p className="px-3 py-3 text-xs text-zinc-500">
-              Digite um nome para buscar incelicas…
+              Digite um nome para buscar zapli…
             </p>
           )}
           {results.map(p => {

@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import JogarClient from '@/components/games/JogarClient'
 
-const ADMIN_USERNAME = 'incelicasappoficial'
+const ADMIN_USERNAME = 'zaplioficial'
 
 export default async function JogarPage() {
   const supabase = await createClient()

@@ -4,7 +4,7 @@ import MessagesClient from '@/components/messages/MessagesClient'
 import { fetchConversationList } from '@/lib/messages'
 
 export const dynamic = 'force-dynamic'
-export const metadata = { title: 'Mensagens — Incelicas' }
+export const metadata = { title: 'Mensagens — Zapli' }
 
 export default async function MessagesPage() {
   const supabase = await createClient()

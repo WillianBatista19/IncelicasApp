@@ -98,7 +98,7 @@ export default function FeedClient({ currentUserId, currentUserUsername }: Props
       return (
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-6 py-12 text-center">
           <p className="mb-3 text-3xl">🔍</p>
-          <p className="mb-1 text-sm font-semibold text-zinc-300">Seu feed tá vazio, incelica!</p>
+          <p className="mb-1 text-sm font-semibold text-zinc-300">Seu feed tá vazio, zapli!</p>
           <p className="mb-5 text-xs text-zinc-500">
             Siga alguém para ver os posts delas aqui. Que tal explorar?
           </p>
@@ -116,7 +116,7 @@ export default function FeedClient({ currentUserId, currentUserUsername }: Props
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-6 py-12 text-center">
         <p className="mb-2 text-2xl">✨</p>
         <p className="text-sm text-zinc-400">
-          Nenhuma vibe por aqui ainda. Seja a primeira a postar, incelica!
+          Nenhuma vibe por aqui ainda. Seja a primeira a postar, zapli!
         </p>
       </div>
     )
@@ -142,7 +142,7 @@ export default function FeedClient({ currentUserId, currentUserUsername }: Props
 
       {!hasMore && posts.length > 0 && (
         <p className="py-6 text-center text-xs text-zinc-600">
-          Você chegou ao fim do feed, incelica! 🎉
+          Você chegou ao fim do feed, zapli! 🎉
         </p>
       )}
     </div>

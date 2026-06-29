@@ -108,7 +108,7 @@ export default function NewGroupModal({ onClose }: { onClose: () => void }) {
               type="text"
               value={groupName}
               onChange={e => setGroupName(e.target.value)}
-              placeholder="Ex: Incelicas do BBB"
+              placeholder="Ex: Zapli do BBB"
               maxLength={60}
               className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-3.5 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 outline-none transition-colors focus:border-[#D4537E]"
             />
@@ -155,10 +155,10 @@ export default function NewGroupModal({ onClose }: { onClose: () => void }) {
           <div className="max-h-48 overflow-y-auto -mx-1 px-1">
             {loading && <p className="px-2 py-2 text-xs text-zinc-500">Buscando…</p>}
             {!loading && query.trim() && results.length === 0 && (
-              <p className="px-2 py-2 text-xs text-zinc-500">Nenhuma incelica encontrada.</p>
+              <p className="px-2 py-2 text-xs text-zinc-500">Nenhuma zapli encontrada.</p>
             )}
             {!query.trim() && results.length === 0 && (
-              <p className="px-2 py-2 text-xs text-zinc-500">Digite um nome para buscar incelicas…</p>
+              <p className="px-2 py-2 text-xs text-zinc-500">Digite um nome para buscar zapli…</p>
             )}
             {results.map(p => {
               const isSelected = selected.some(s => s.id === p.id)

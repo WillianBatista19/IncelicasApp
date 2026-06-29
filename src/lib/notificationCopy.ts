@@ -41,13 +41,13 @@ export function notificationText(
         ? `${actorName} comentou no seu post: "${excerpt(commentContent)}"`
         : `${actorName} comentou no seu post`
     case 'follow':
-      return `${actorName} te incelicou`
+      return `${actorName} te zapliou`
     case 'mention':
       return `${actorName} te marcou em um post`
     case 'repost':
-      return `${actorName} incelicou seu post`
+      return `${actorName} zapliou seu post`
     case 'follow_back':
-      return `${actorName} te seguiu de volta, incelica!`
+      return `${actorName} te seguiu de volta, zapli!`
     case 'comment_reply':
       return `${actorName} respondeu seu comentário`
     case 'comment_like':

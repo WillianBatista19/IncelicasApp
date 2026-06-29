@@ -11,7 +11,7 @@ import MediaEmbed from '@/components/feed/MediaEmbed'
 import VibeCheck from '@/components/feed/VibeCheck'
 import VibeListModal from '@/components/feed/VibeListModal'
 import CommentsSection from '@/components/feed/CommentsSection'
-import IncelicarButton from '@/components/feed/IncelicarButton'
+import ZapliarButton from '@/components/feed/ZapliarButton'
 import BookmarkButton from '@/components/feed/BookmarkButton'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import VerifiedBadge from '@/components/VerifiedBadge'
@@ -68,7 +68,7 @@ const PostCard = memo(function PostCard({ post, currentUserId, currentUserUserna
   const supabase    = useMemo(() => createClient(), [])
   const profile     = post.profiles
   const isOwner     = Boolean(currentUserId && currentUserId === post.user_id)
-  const isModerator = currentUserUsername === 'incelicasappoficial'
+  const isModerator = currentUserUsername === 'zaplioficial'
 
   console.log('[PostCard]', post.id, '| image_url:', post.image_url)
 
@@ -168,7 +168,7 @@ const PostCard = memo(function PostCard({ post, currentUserId, currentUserUserna
               {profile.display_name}
               {isVerified(profile.username) && <VerifiedBadge />}
             </Link>
-            <span>incelicou</span>
+            <span>zapliou</span>
             <span className="text-zinc-700">·</span>
             <time dateTime={post.created_at}>{relativeTime(post.created_at)}</time>
 
@@ -177,7 +177,7 @@ const PostCard = memo(function PostCard({ post, currentUserId, currentUserUserna
                 type="button"
                 onClick={() => setShowDeleteModal(true)}
                 disabled={deleting}
-                aria-label="Deletar incelicada"
+                aria-label="Deletar zapliada"
                 className="ml-auto rounded-lg p-1 text-zinc-700 transition-colors hover:bg-red-950/50 hover:text-red-400 disabled:opacity-40"
               >
                 <TrashIcon className="h-3.5 w-3.5" />
@@ -340,7 +340,7 @@ const PostCard = memo(function PostCard({ post, currentUserId, currentUserUserna
           <VibeCheck postId={post.id} initialVibes={post.vibes} currentUserId={currentUserId} onShowVibes={() => setShowVibesModal(true)} />
 
           {currentUserId !== post.user_id && (
-            <IncelicarButton
+            <ZapliarButton
               postId={post.id}
               postOwnerId={post.user_id}
               currentUserId={currentUserId}
@@ -474,7 +474,7 @@ function LazyVideo({ src, maxHeight = 400 }: { src: string; maxHeight?: number }
 // ─── Comment preview banner ───────────────────────────────────────────────────
 
 function CommentPreviewBanner({ preview, onClick }: { preview: CommentPreview; onClick: () => void }) {
-  const name    = preview.profiles.display_name || preview.profiles.username || 'Incelica'
+  const name    = preview.profiles.display_name || preview.profiles.username || 'Zapli'
   const excerpt = preview.content.length > 100 ? `${preview.content.slice(0, 100)}…` : preview.content
 
   return (

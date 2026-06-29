@@ -110,7 +110,7 @@ export default function SignupPage() {
   return (
     <AuthCard
       title="Cria sua conta"
-      subtitle="Bora entrar nessa vibe, incelica!"
+      subtitle="Bora entrar nessa vibe, zapli!"
     >
       {error && (
         <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">

@@ -40,11 +40,11 @@ export async function POST(req: NextRequest) {
   const { data: profile } = await supabase
     .from('profiles')
     .select('id')
-    .eq('username', 'incelicasappoficial')
+    .eq('username', 'zaplioficial')
     .single()
 
   if (!profile) {
-    return NextResponse.json({ error: 'Profile @incelicasappoficial not found' }, { status: 500 })
+    return NextResponse.json({ error: 'Profile @zaplioficial not found' }, { status: 500 })
   }
 
   const { error } = await supabase

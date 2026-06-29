@@ -134,7 +134,7 @@ export default function UserSearch({ currentUserId, currentUserUsername }: Props
           type="search"
           value={query}
           onChange={handleChange}
-          placeholder="Buscar incelicas ou posts..."
+          placeholder="Buscar zapli ou posts..."
           className="w-full rounded-xl border border-zinc-700 bg-zinc-800/60 py-3 pl-9 pr-4 text-sm text-zinc-100 placeholder-zinc-500 outline-none transition-colors focus:border-[#D4537E] focus:ring-1 focus:ring-[#D4537E]"
         />
       </div>
@@ -166,7 +166,7 @@ export default function UserSearch({ currentUserId, currentUserUsername }: Props
       {noResults && (
         <p className="mt-3 text-xs text-zinc-500">
           {tab === 'pessoas'
-            ? 'Nenhuma incelica encontrada. Tenta outro nome.'
+            ? 'Nenhuma zapli encontrada. Tenta outro nome.'
             : `Nenhum post encontrado para '${query.trim()}'.`}
         </p>
       )}

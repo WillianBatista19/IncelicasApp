@@ -50,7 +50,7 @@ export default async function ChangelogPage() {
             ← Voltar ao feed
           </Link>
           <p className="mt-4 text-2xl font-black tracking-tight">
-            <span className="text-[#D4537E]">Incelicas</span>
+            <span className="text-[#D4537E]">Zapli</span>
           </p>
           <h1 className="mt-1 text-lg font-semibold text-zinc-300">
             O que tem de novo

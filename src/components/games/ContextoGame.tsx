@@ -152,7 +152,7 @@ export default function ContextoGame({ currentUserId }: { currentUserId: string 
   }
 
   function handleShare() {
-    const text = `Encontrei a palavra do Contexto em ${guesses.length} tentativa${guesses.length !== 1 ? 's' : ''}! 🧠 #incelicas`
+    const text = `Encontrei a palavra do Contexto em ${guesses.length} tentativa${guesses.length !== 1 ? 's' : ''}! 🧠 #zapli`
     void navigator.clipboard.writeText(text).then(() => {
       setShared(true)
       setTimeout(() => setShared(false), 2000)

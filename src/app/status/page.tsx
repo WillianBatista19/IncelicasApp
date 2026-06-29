@@ -41,7 +41,7 @@ export default function StatusPage() {
         {/* Header */}
         <div className="mb-8 text-center">
           <p className="text-2xl font-black tracking-tight">
-            <span className="text-[#D4537E]">Incelicas</span>
+            <span className="text-[#D4537E]">Zapli</span>
           </p>
           <h1 className="mt-1 text-lg font-semibold text-zinc-300">Status do Sistema</h1>
         </div>

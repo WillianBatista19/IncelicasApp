@@ -566,7 +566,7 @@ export default function AdminClient() {
         <h2 className="mb-1 text-sm font-semibold text-zinc-100">📣 Criar Post Oficial</h2>
         <p className="mb-4 text-xs text-zinc-500">
           Publica um post no feed como a conta{' '}
-          <span className="font-medium text-zinc-300">@incelicasappoficial</span>.
+          <span className="font-medium text-zinc-300">@zaplioficial</span>.
           Use para anunciar updates, bugs corrigidos ou novidades.
         </p>
 
@@ -574,7 +574,7 @@ export default function AdminClient() {
           value={officialContent}
           onChange={e => setOfficialContent(e.target.value.slice(0, 2000))}
           rows={5}
-          placeholder={'🆕 Nova atualização!\n\n• Feature A\n• Feature B\n\n#incelicas #update'}
+          placeholder={'🆕 Nova atualização!\n\n• Feature A\n• Feature B\n\n#zapli #update'}
           className="w-full resize-none rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 outline-none focus:border-[#D4537E]"
         />
 

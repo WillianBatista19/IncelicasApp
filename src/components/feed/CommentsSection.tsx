@@ -33,7 +33,7 @@ const SELECT = 'id, user_id, parent_id, content, created_at, profiles (display_n
 const BLANK_PROFILE = { display_name: null, username: '', avatar_url: null } as const
 
 export default function CommentsSection({ postId, currentUserId, currentUserUsername, highlightCommentId }: Props) {
-  const isModerator = currentUserUsername === 'incelicasappoficial'
+  const isModerator = currentUserUsername === 'zaplioficial'
   const supabase = useMemo(() => createClient(), [])
 
   const [all,             setAll]             = useState<CommentRow[]>([])
@@ -257,7 +257,7 @@ export default function CommentsSection({ postId, currentUserId, currentUserUser
             const replies     = byParent[comment.id] ?? []
             const showReplies = expandedReplies.has(comment.id)
             const isReplying  = replyingTo === comment.id
-            const authorName  = comment.profiles.display_name || comment.profiles.username || 'Incelica'
+            const authorName  = comment.profiles.display_name || comment.profiles.username || 'Zapli'
             const liked       = currentUserId
               ? comment.comment_likes.some(l => l.user_id === currentUserId)
               : false
@@ -367,7 +367,7 @@ export default function CommentsSection({ postId, currentUserId, currentUserUser
                 {showReplies && (
                   <ul className="ml-8 mt-2 space-y-3 border-l border-zinc-800 pl-3">
                     {replies.map(reply => {
-                      const replyAuthor = reply.profiles.display_name || reply.profiles.username || 'Incelica'
+                      const replyAuthor = reply.profiles.display_name || reply.profiles.username || 'Zapli'
                       const replyLiked  = currentUserId
                         ? reply.comment_likes.some(l => l.user_id === currentUserId)
                         : false

@@ -16,7 +16,7 @@ const TAB_CONFIG: Record<Tab, { label: string; color: string; activeColor: strin
 }
 
 const GAME_TITLE: Record<Tab, string> = {
-  word:     '📝 Termo das Incelicas',
+  word:     '📝 Termo das Zapli',
   music:    '🎵 Adivinhe a Música',
   contexto: '🧠 Contexto',
 }

@@ -48,7 +48,7 @@ export default async function GrammyPage() {
       .select('username')
       .eq('id', user.id)
       .single()
-    isAdmin = profile?.username === 'incelicasappoficial'
+    isAdmin = profile?.username === 'zaplioficial'
   }
 
   // All editions for admin panel

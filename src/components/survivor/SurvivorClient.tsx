@@ -357,8 +357,8 @@ function FinishedResults({ event, tracks }: { event: SurvivorEvent; tracks: Surv
 
   function shareWinner() {
     const text = isCoChampions
-      ? `🏆🏆 EMPATE HISTÓRICO! "${winners[0].track_name}" e "${winners[1].track_name}" são co-campeãs do Survivor de ${event.album_name} nas Incelicas!`
-      : `A música campeã de ${event.album_name} nas Incelicas é ${winners[0]?.track_name}! 🏆`
+      ? `🏆🏆 EMPATE HISTÓRICO! "${winners[0].track_name}" e "${winners[1].track_name}" são co-campeãs do Survivor de ${event.album_name} nas Zapli!`
+      : `A música campeã de ${event.album_name} nas Zapli é ${winners[0]?.track_name}! 🏆`
     if (navigator.share) navigator.share({ text })
     else navigator.clipboard.writeText(text)
   }

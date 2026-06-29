@@ -1,5 +1,5 @@
 -- ============================================================
--- Incelicas — Supabase Schema
+-- zapli — Supabase Schema
 -- ============================================================
 
 -- ------------------------------------------------------------
@@ -75,7 +75,6 @@ create table posts (
   youtube_url    text,
   category       post_category,
   created_at     timestamptz not null default now(),
-  -- Repost ("incelicar") columns
   repost_of      uuid references posts (id) on delete cascade,
   repost_comment text,
   repost_count   integer not null default 0,
@@ -270,7 +269,7 @@ create trigger trg_notify_follow
   after insert on follows
   for each row execute procedure notify_on_follow();
 
--- Repost (incelicar) → increment count on original + notify its owner
+
 create or replace function handle_repost_insert()
 returns trigger
 language plpgsql

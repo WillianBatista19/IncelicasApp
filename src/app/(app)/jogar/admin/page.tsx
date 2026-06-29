@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import AdminClient from '@/components/games/AdminClient'
 
-const ADMIN_USERNAME = 'incelicasappoficial'
+const ADMIN_USERNAME = 'zaplioficial'
 
 export default async function JogarAdminPage() {
   const supabase = await createClient()

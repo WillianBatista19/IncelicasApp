@@ -51,7 +51,7 @@ export function useFeed(currentUserId: string) {
     // Resolve who this user follows + the official account, in parallel
     const [followsRes, officialRes] = await Promise.all([
       supabase.from('follows').select('following_id').eq('follower_id', currentUserId),
-      supabase.from('profiles').select('id').eq('username', 'incelicasappoficial').maybeSingle(),
+      supabase.from('profiles').select('id').eq('username', 'zaplioficial').maybeSingle(),
     ])
 
     const followedIds = (followsRes.data ?? []).map(f => (f as { following_id: string }).following_id)
@@ -152,7 +152,7 @@ export function useFeed(currentUserId: string) {
     }
 
     const channel = supabase
-      .channel('incelicas-feed')
+      .channel('zapli-feed')
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'posts' },

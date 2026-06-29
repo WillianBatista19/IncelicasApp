@@ -55,7 +55,7 @@ export default function RecoverPage() {
   return (
     <AuthCard
       title="Recuperar senha"
-      subtitle="Manda teu email que a gente te ajuda, incelica."
+      subtitle="Manda teu email que a gente te ajuda, zapli."
     >
       {error && (
         <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">

@@ -45,7 +45,7 @@ export default function StoriesBar({ currentUserId, currentUserUsername }: Props
       supabase
         .from('profiles')
         .select('id')
-        .eq('username', 'incelicasappoficial')
+        .eq('username', 'zaplioficial')
         .maybeSingle(),
     ])
 

@@ -88,7 +88,7 @@ export default async function AvaliarPage({ searchParams }: { searchParams?: Sea
       artist_name:   r.artist_name,
       cover_url:     r.cover_url,
       overall_score: r.overall_score,
-      username:      p?.username ?? 'incelica',
+      username:      p?.username ?? 'zapli',
       display_name:  p?.display_name ?? null,
     }
   })

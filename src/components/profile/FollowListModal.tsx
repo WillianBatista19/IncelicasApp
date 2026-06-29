@@ -98,7 +98,7 @@ export default function FollowListModal({
 
   const title     = type === 'followers' ? 'Seguidores' : 'Seguindo'
   const emptyText = type === 'followers'
-    ? 'Ainda não tem incelicas seguindo.'
+    ? 'Ainda não tem zapli seguindo.'
     : 'Ainda não segue ninguém.'
 
   const canRemove = isOwnProfile && type === 'followers'

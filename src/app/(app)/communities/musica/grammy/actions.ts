@@ -128,7 +128,7 @@ async function requireAdmin() {
     .eq('id', user.id)
     .single()
 
-  if (profile?.username !== 'incelicasappoficial') throw new Error('Sem permissão')
+  if (profile?.username !== 'zaplioficial') throw new Error('Sem permissão')
   return { supabase, userId: user.id }
 }
 

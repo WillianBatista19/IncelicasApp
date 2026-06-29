@@ -108,7 +108,7 @@ export default async function AlbumResultsPage({ params }: Props) {
         review_text:   r.review_text as string,
         overall_score: r.overall_score as number | null,
         created_at:    r.created_at,
-        username:      p?.username ?? 'incelica',
+        username:      p?.username ?? 'zapli',
         display_name:  p?.display_name ?? null,
         avatar_url:    p?.avatar_url ?? null,
       }
@@ -229,7 +229,7 @@ export default async function AlbumResultsPage({ params }: Props) {
           {rows.map(row => {
             const profileData = row.profiles
             const p = (Array.isArray(profileData) ? profileData[0] : profileData) as { username: string; display_name: string | null; avatar_url: string | null } | null
-            const name = p?.display_name ?? p?.username ?? 'Incelica'
+            const name = p?.display_name ?? p?.username ?? 'Zapli'
             return (
               <div key={row.id} className="flex items-center gap-3 rounded-xl bg-zinc-900/60 border border-zinc-800 p-3">
                 <Link href={`/profile/${p?.username}`}>

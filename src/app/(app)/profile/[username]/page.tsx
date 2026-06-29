@@ -204,7 +204,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-6 py-14 text-center">
           <p className="mb-2 text-4xl">🔒</p>
           <p className="text-sm font-semibold text-zinc-300">Este perfil é privado</p>
-          <p className="mt-1 text-xs text-zinc-500">Solicite seguir para ver os posts desta incelica.</p>
+          <p className="mt-1 text-xs text-zinc-500">Solicite seguir para ver os posts desta zapli.</p>
         </div>
       ) : (
         <>

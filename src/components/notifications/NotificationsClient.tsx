@@ -58,7 +58,7 @@ export default function NotificationsClient({ initialNotifications, userId, curr
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-6 py-16 text-center">
           <p className="mb-2 text-3xl">🔔</p>
           <p className="text-sm text-zinc-400">
-            Nada por aqui. Que tal postar algo e agitar as incelicas?
+            Nada por aqui. Que tal postar algo e agitar as zapli?
           </p>
         </div>
       ) : (

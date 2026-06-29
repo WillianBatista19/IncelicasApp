@@ -13,7 +13,7 @@ export default function AuthCard({ title, subtitle, children }: Props) {
         {/* Wordmark */}
         <div className="mb-8 text-center">
           <span className="text-3xl font-bold tracking-tight text-pink">
-            incelicas
+            zapli
           </span>
           <span className="ml-1 text-3xl">✦</span>
         </div>

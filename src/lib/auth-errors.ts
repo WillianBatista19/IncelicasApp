@@ -1,5 +1,5 @@
 const errorMap: Record<string, string> = {
-  'Invalid login credentials':      'Email ou senha incorretos. Tenta de novo, incelica!',
+  'Invalid login credentials':      'Email ou senha incorretos. Tenta de novo, zapli!',
   'Email not confirmed':            'Confirma seu email antes de entrar. Checa tua caixa de entrada!',
   'User already registered':        'Este email já está sendo usado por outra conta.',
   'email address already registered': 'Este email já está sendo usado por outra conta.',

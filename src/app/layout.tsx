@@ -4,7 +4,7 @@ import { UserProvider } from '@/context/UserContext'
 import ThemeProvider from '@/components/ThemeProvider'
 
 export const metadata: Metadata = {
-  title:       'Incelicas',
+  title:       'Zapli',
   description: 'A rede da galera — anime, BBB, música, séries, filmes e livros.',
   icons: {
     icon:     '/logo.svg',

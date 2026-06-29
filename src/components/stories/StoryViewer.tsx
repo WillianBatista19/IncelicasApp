@@ -254,7 +254,7 @@ export default function StoryViewer({
   const profile        = story.profiles
   const name           = profile.display_name || profile.username
   const isOwnStory     = story.user_id === currentUserId
-  const isModerator    = currentUserUsername === 'incelicasappoficial'
+  const isModerator    = currentUserUsername === 'zaplioficial'
   const groupStories   = group.stories
 
   return createPortal(

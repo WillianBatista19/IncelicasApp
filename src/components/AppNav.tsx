@@ -46,9 +46,9 @@ export default function AppNav() {
     <header className="fixed inset-x-0 top-0 z-50 hidden border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-xl sm:block">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
 
-        {/* Logo: "incel" flips to dark text in light mode, "icas" stays pink */}
+        {/* Logo: "Zapli" flips to dark text in light mode, "icas" stays pink */}
         <Link href="/feed" onClick={handleLogoClick} className="text-xl font-bold tracking-tight">
-          <span className="logo-prefix">incel</span><span className="text-pink">icas</span>
+          <span className="logo-prefix">Za</span><span className="text-pink">pli</span>
           {' '}<span className="text-zinc-400">✦</span>
         </Link>
 

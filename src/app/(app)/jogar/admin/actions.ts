@@ -18,7 +18,7 @@ export async function submitChangelogEntry(
     .eq('id', user.id)
     .single()
 
-  if (profile?.username !== 'incelicasappoficial') {
+  if (profile?.username !== 'zaplioficial') {
     return { error: 'Apenas a conta oficial pode adicionar entradas no changelog' }
   }
 
@@ -31,10 +31,10 @@ export async function submitChangelogEntry(
 
   if (dbError) return { error: dbError.message }
 
-  // Insert post directly as the authenticated incelicasappoficial user.
+  // Insert post directly as the authenticated zaplioficial user.
   // This satisfies the RLS policy (auth.uid() = user_id) without needing
   // the service role key.
-  const body = `🆕 ${version.trim()} — ${title.trim()}\n\n${items.map(i => `• ${i}`).join('\n')}\n\n#incelicas #update`
+  const body = `🆕 ${version.trim()} — ${title.trim()}\n\n${items.map(i => `• ${i}`).join('\n')}\n\n#zapli #update`
   const { error: postError } = await supabase
     .from('posts')
     .insert({ user_id: user.id, content: body })
@@ -58,7 +58,7 @@ export async function postOfficialMessage(content: string): Promise<{ error?: st
     .eq('id', user.id)
     .single()
 
-  if (profile?.username !== 'incelicasappoficial') {
+  if (profile?.username !== 'zaplioficial') {
     return { error: 'Apenas a conta oficial pode criar posts oficiais' }
   }
 

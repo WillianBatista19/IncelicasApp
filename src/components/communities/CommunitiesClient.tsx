@@ -90,7 +90,7 @@ export default function CommunitiesClient({ communities, myMemberships, currentU
 
       {communities.length === 0 && (
         <p className="text-zinc-500 text-sm text-center py-12">
-          Nenhuma comunidade ainda. Cria a primeira, incelica!
+          Nenhuma comunidade ainda. Cria a primeira, zapli!
         </p>
       )}
 

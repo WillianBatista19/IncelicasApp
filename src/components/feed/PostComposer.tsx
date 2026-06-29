@@ -322,7 +322,7 @@ export default function PostComposer({ profile }: { profile: Profile }) {
             ref={textareaRef}
             value={content}
             onChange={e => { setContent(e.target.value); resize() }}
-            placeholder="O que tá rolando, incelica?"
+            placeholder="O que tá rolando, Zapler?"
             rows={3}
             className={[
               'min-w-0 flex-1 resize-none bg-transparent text-sm leading-relaxed',
