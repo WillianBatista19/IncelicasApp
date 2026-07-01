@@ -1,6 +1,5 @@
 {
-  "/icon.svg/route": "app/icon.svg/route.js",
-  "/api/lastfm/route": "app/api/lastfm/route.js",
-  "/(app)/profile/[username]/page": "app/(app)/profile/[username]/page.js",
-  "/(app)/feed/page": "app/(app)/feed/page.js"
+  "/(app)/feed/page": "app/(app)/feed/page.js",
+  "/(auth)/recover/page": "app/(auth)/recover/page.js",
+  "/(auth)/login/page": "app/(auth)/login/page.js"
 }
